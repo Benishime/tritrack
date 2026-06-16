@@ -205,6 +205,12 @@ function initTodayView() {
     const hrv = parseInt(document.getElementById('input-hrv').value);
     const weight = parseFloat(document.getElementById('input-weight').value);
 
+    // En az bir alan dolu olmalı (boş kayıt yapma)
+    if (isNaN(sleep) && isNaN(sleepScore) && isNaN(hrv) && isNaN(weight)) {
+      showToast("En az bir değer gir (uyku, puan, HRV veya kilo).", "error");
+      return;
+    }
+
     if (!state.holisticLogs[currentDateStr]) {
       state.holisticLogs[currentDateStr] = {};
     }
@@ -368,9 +374,9 @@ function renderTodayView() {
             <span class="badge badge-${workout.sport}">${sportIcons[workout.sport]} ${sportNames[workout.sport]}</span>
             <span class="text-xs text-muted">${durationStr} | RPE: ${workout.rpe}/10</span>
           </div>
-          <div style="display:flex; align-items:center; gap:4px;">
-            <button class="edit-workout-btn" style="font-size:15px; border:none; background:none; cursor:pointer; padding:2px 4px;" title="Düzenle" data-id="${workout.id}">✏️</button>
-            <button class="delete-workout-btn modal-close" style="font-size:18px; border:none; background:none; cursor:pointer;" title="Sil" data-id="${workout.id}">&times;</button>
+          <div style="display:flex; align-items:center; gap:2px;">
+            <button class="edit-workout-btn icon-tap-btn" style="font-size:16px;" title="Düzenle" data-id="${workout.id}">✏️</button>
+            <button class="delete-workout-btn icon-tap-btn" style="font-size:20px;" title="Sil" data-id="${workout.id}">&times;</button>
           </div>
         </div>
         <div>
@@ -570,6 +576,9 @@ function initProgramView() {
   addBtn.addEventListener('click', () => openPlanModal(currentDateStr));
   closeBtn.addEventListener('click', () => modal.classList.remove('open'));
 
+  // Branşa göre mesafe birimi etiketi (yüzme → metre)
+  document.getElementById('plan-sport').addEventListener('change', updatePlanDistanceLabel);
+
   modal.addEventListener('click', (e) => {
     if (e.target === modal) modal.classList.remove('open');
   });
@@ -611,7 +620,14 @@ function initProgramView() {
 function openPlanModal(defaultDate) {
   const modal = document.getElementById('modal-plan');
   document.getElementById('plan-date').value = defaultDate;
+  updatePlanDistanceLabel();
   modal.classList.add('open');
+}
+
+function updatePlanDistanceLabel() {
+  const sport = document.getElementById('plan-sport').value;
+  const label = document.getElementById('plan-distance-label');
+  if (label) label.innerText = (sport === 'swim') ? 'Mesafe Hedefi (m)' : 'Mesafe Hedefi (km)';
 }
 
 // ---- TOPLU HAFTALIK PLAN İÇE AKTARMA ----
@@ -785,7 +801,7 @@ function submitBulkPlan() {
   const workouts = parsed.filter(p => p.sport);
 
   if (workouts.length === 0) {
-    alert('Eklenecek antrenman bulunamadı. Format: "Pazartesi: Koşu 10km".');
+    showToast('Eklenecek antrenman bulunamadı. Format: "Pazartesi: Koşu 10km".', 'error');
     return;
   }
 
@@ -1285,7 +1301,7 @@ function addSelectedFoodToState(isPlanned) {
   const unit = document.getElementById('food-portion-unit').value;
 
   if (isNaN(qty) || qty <= 0) {
-    alert("Lütfen geçerli bir miktar girin.");
+    showToast("Lütfen geçerli bir miktar girin.", 'error');
     return;
   }
 
@@ -1701,7 +1717,7 @@ function initWorkoutLogView() {
     const notes = document.getElementById('run-notes').value;
 
     if (duration <= 0 || distance <= 0) {
-      alert("Lütfen mesafe ve süre değerlerini girin.");
+      showToast("Lütfen mesafe ve süre değerlerini girin.", 'error');
       return;
     }
 
@@ -1740,7 +1756,7 @@ function initWorkoutLogView() {
     const notes = document.getElementById('bike-notes').value;
 
     if (duration <= 0 || distance <= 0) {
-      alert("Lütfen mesafe ve süre değerlerini girin.");
+      showToast("Lütfen mesafe ve süre değerlerini girin.", 'error');
       return;
     }
 
@@ -1776,7 +1792,7 @@ function initWorkoutLogView() {
     const notes = document.getElementById('swim-notes').value;
 
     if (duration <= 0 || distance <= 0) {
-      alert("Lütfen mesafe ve süre girin.");
+      showToast("Lütfen mesafe ve süre girin.", 'error');
       return;
     }
 
@@ -1807,6 +1823,10 @@ function initWorkoutLogView() {
     const category = document.getElementById('fitness-category').value;
     const rpe = parseInt(document.getElementById('fitness-rpe').value);
     const notes = document.getElementById('fitness-notes').value;
+    const fh = parseInt(document.getElementById('fitness-duration-h').value) || 0;
+    const fm = parseInt(document.getElementById('fitness-duration-m').value) || 0;
+    const fs = parseInt(document.getElementById('fitness-duration-s').value) || 0;
+    const fitnessDuration = (fh * 3600) + (fm * 60) + fs;
 
     const nameInputs = document.querySelectorAll('.exercise-name');
     const setInputs = document.querySelectorAll('.exercise-sets');
@@ -1824,7 +1844,7 @@ function initWorkoutLogView() {
     }
 
     if (exercises.length === 0) {
-      alert("En az bir egzersiz ekleyin.");
+      showToast("En az bir egzersiz ekleyin.", 'error');
       return;
     }
 
@@ -1832,7 +1852,7 @@ function initWorkoutLogView() {
       id: 'w_' + Date.now(),
       date: currentDateStr,
       sport: 'fitness',
-      duration: exercises.length * 5 * 60,
+      duration: fitnessDuration > 0 ? fitnessDuration : exercises.length * 5 * 60, // girilmezse tahmin
       exercises,
       rpe,
       notes: `${category.toUpperCase()} - ${notes}`
@@ -1854,6 +1874,7 @@ function saveWorkoutAndRoute(workout) {
     }
     editingWorkoutId = null;
     saveState();
+    resetWorkoutForms();
     showToast("Antrenman güncellendi!");
     document.querySelector('.bottom-nav [data-view="today"]').click();
     return;
@@ -1868,6 +1889,7 @@ function saveWorkoutAndRoute(workout) {
   }
 
   saveState();
+  resetWorkoutForms();
   showToast("Antrenman başarıyla kaydedildi!");
   document.querySelector('.bottom-nav [data-view="today"]').click();
 }
@@ -1980,6 +2002,7 @@ function prefillWorkoutForm(w) {
     setRpe('swim', 7);
     document.getElementById('swim-notes').value = w.notes || '';
   } else if (w.sport === 'fitness') {
+    setDur('fitness');
     setRpe('fitness', 6);
     document.getElementById('fitness-notes').value = w.notes || '';
     const container = document.getElementById('fitness-exercises-container');
@@ -2116,10 +2139,20 @@ function appendChatMessage(sender, text) {
   msgEl.style.lineHeight = '1.4';
   msgEl.style.border = '1px solid var(--card-border)';
   msgEl.style.wordBreak = 'break-word';
-  msgEl.innerText = text;
-  
+  msgEl.innerHTML = (sender === 'user') ? escapeHtml(text) : renderMarkdownLite(text);
+
   container.appendChild(msgEl);
   container.scrollTop = container.scrollHeight;
+}
+
+// Basit markdown → HTML (önce HTML kaçışı, sonra **kalın**, ### başlık, - madde, satır sonu)
+function renderMarkdownLite(text) {
+  return escapeHtml(text)
+    .replace(/^###\s+(.*)$/gm, '<strong>$1</strong>')
+    .replace(/^##\s+(.*)$/gm, '<strong>$1</strong>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/^\s*[-*]\s+/gm, '• ')
+    .replace(/\n/g, '<br>');
 }
 
 // Güncel Gemini modeli (gerekirse buradan değiştir)
@@ -2448,12 +2481,12 @@ function importData(file) {
     try {
       imported = JSON.parse(e.target.result);
     } catch (err) {
-      alert("Dosya okunamadı. Lütfen geçerli bir TriTrack (.json) yedek dosyası seçin.");
+      showToast("Dosya okunamadı. Lütfen geçerli bir TriTrack (.json) yedek dosyası seçin.", 'error');
       return;
     }
 
     if (!isValidStateShape(imported)) {
-      alert("Geçersiz yedek dosyası. Beklenen TriTrack veri yapısı bulunamadı.");
+      showToast("Geçersiz yedek dosyası. Beklenen TriTrack veri yapısı bulunamadı.", 'error');
       return;
     }
 
@@ -2475,7 +2508,7 @@ function importData(file) {
     setTimeout(() => location.reload(), 1000);
   };
 
-  reader.onerror = () => alert("Dosya okunurken bir hata oluştu.");
+  reader.onerror = () => showToast("Dosya okunurken bir hata oluştu.", 'error');
   reader.readAsText(file);
 }
 
@@ -3179,20 +3212,20 @@ function obRenderStep() {
   const overlay = document.getElementById('onboarding-overlay');
   overlay.querySelectorAll('.ob-step').forEach(s => { s.hidden = (parseInt(s.dataset.step) !== obStep); });
   overlay.querySelectorAll('.ob-dot').forEach(d => d.classList.toggle('active', parseInt(d.dataset.step) <= obStep));
-  document.getElementById('ob-back').style.visibility = (obStep === 1) ? 'hidden' : 'visible';
+  document.getElementById('ob-back').style.display = (obStep === 1) ? 'none' : 'block';
   document.getElementById('ob-next').innerText = (obStep === 4) ? '🚀 Başla' : 'İleri';
 }
 
 function obValidateStep() {
   if (obStep === 1) {
-    if (!document.getElementById('ob-name').value.trim()) { alert('Lütfen ismini gir.'); return false; }
+    if (!document.getElementById('ob-name').value.trim()) { showToast('Lütfen ismini gir.', 'error'); return false; }
   } else if (obStep === 2) {
     const w = parseFloat(document.getElementById('ob-weight').value);
     const h = parseFloat(document.getElementById('ob-height').value);
     const a = parseInt(document.getElementById('ob-age').value);
-    if (!(w > 0) || !(h > 0) || !(a > 0)) { alert('Lütfen kilo, boy ve yaş bilgilerini gir.'); return false; }
+    if (!(w > 0) || !(h > 0) || !(a > 0)) { showToast('Lütfen kilo, boy ve yaş bilgilerini gir.', 'error'); return false; }
   } else if (obStep === 3) {
-    if (!obActivityFactor) { alert('Antrenman yoğunluğunu seç.'); return false; }
+    if (!obActivityFactor) { showToast('Antrenman yoğunluğunu seç.', 'error'); return false; }
   }
   return true;
 }
@@ -3260,12 +3293,12 @@ function obFinish() {
 // 14. YARDIMCI FONKSİYONLAR & PWA ARAÇLARI
 // ==========================================
 
-function showToast(message) {
+function showToast(message, type) {
   const existing = document.querySelector('.toast-notification');
   if (existing) existing.remove();
 
   const toast = document.createElement('div');
-  toast.className = 'toast-notification';
+  toast.className = 'toast-notification' + (type === 'error' ? ' toast-error' : '');
   toast.innerText = message;
   document.body.appendChild(toast);
 

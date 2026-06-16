@@ -9,7 +9,30 @@ Bu dosya, uygulamada adım adım yapılan geliştirmeleri kaydeder. Sonradan dö
 > - `index.html` içindeki `?v=1.X` (css + js linkleri)
 > - `sw.js` içindeki `CACHE_NAME = 'tritrack-vX'`
 >
-> **Son sürüm:** `?v=1.12` · `tritrack-v12`
+> **Son sürüm:** `?v=1.13` · `tritrack-v13`
+
+---
+
+## ✅ UX Raporu Düzeltmeleri (1. parti) — `ux_report.md` temelli
+
+`ux_report.md`'deki bulgulardan net + güvenli + yüksek değerli olanlar düzeltildi:
+
+- **4.1 🔴 Zoom açıldı** — viewport'tan `maximum-scale`/`user-scalable=no` kaldırıldı (erişilebilirlik).
+- **2.1 🔴 Fitness süresi** — Güç formuna Saat/Dakika/Saniye alanı eklendi; süre artık gerçek girişten
+  (`fitness-duration-*`), boş bırakılırsa eski tahmine düşer. `prefillWorkoutForm` da süreyi doldurur.
+- **3.2 🟡 `alert()` → toast** — tüm `alert()` çağrıları kırmızı `showToast(msg, 'error')` ile değiştirildi (`.toast-error`).
+- **3.3 🟡 Kayıt sonrası form sıfırlama** — `saveWorkoutAndRoute` artık `resetWorkoutForms()` çağırıyor.
+- **3.4 🟢 Boş vücut durumu** — hiçbir alan dolu değilse kayıt yapılmaz, uyarı verir.
+- **4.2 🟡 Dokunma alanı** — antrenman ✏️/× butonları `.icon-tap-btn` (min 40×40px).
+- **2.2 🟡 Plan mesafe birimi** — plan modalında branş yüzme ise etiket "Mesafe Hedefi (m)" olur (`updatePlanDistanceLabel`).
+- **1.2 🟡 Sekme adı** — "Kaydet" → **"Antrenman"**.
+- **2.5 🟡 Yazım** — "Listedebulamadın mı?" → "Listede bulamadın mı?".
+- **2.6 🟢 Onboarding** — ilk adımda "Geri" butonu `display:none` (yer kaplamıyor).
+- **6.5 🟢 AI markdown** — sohbet/raporlar `renderMarkdownLite` ile render ediliyor (**kalın**, ###, -, satır sonu).
+
+> **Ertelenenler (ürün kararı / büyük iş — raporda gerekçeli):** 1.1 (6→5 sekme), 3.1 (confirm→özel modal),
+> 1.4 (antrenman tarih seçici), 5.1 (IndexedDB/otomatik yedek), 6.3 (inline stil refactor),
+> 6.7 (porsiyon bazlı besin hesabı), 5.3 (API anahtarı maskeleme), 4.4 (3'lü tema döngüsü).
 
 ---
 

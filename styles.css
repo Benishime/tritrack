@@ -977,6 +977,29 @@ html, body {
   transform: translate(-50%, 0);
 }
 
+.toast-notification.toast-error {
+  background-color: #ef4444;
+}
+
+/* Emoji/simge butonları için minimum dokunma alanı (WCAG ~44px) */
+.icon-tap-btn {
+  min-width: 40px;
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-radius: 10px;
+  color: var(--text-muted);
+  transition: background-color 0.15s ease;
+}
+
+.icon-tap-btn:active {
+  background-color: var(--bg-secondary);
+}
+
 /* ==========================================================================
    PLAN DIET STYLING FOR DIET VIEW
    ========================================================================== */

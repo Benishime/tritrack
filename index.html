@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>TriTrack - Triatlon ve Koşu Takip</title>
   
   <!-- PWA Meta Etiketleri -->
@@ -13,7 +13,7 @@
   <link rel="manifest" href="manifest.json">
   
   <!-- CSS -->
-  <link rel="stylesheet" href="styles.css?v=1.12">
+  <link rel="stylesheet" href="styles.css?v=1.13">
 </head>
 <body class="theme-auto">
   <div class="app-container">
@@ -475,6 +475,21 @@
             </div>
             <button type="button" id="add-exercise-row-btn" class="btn btn-secondary mb-3 btn-full" style="padding: 8px 12px; border-radius: 10px;">+ Hareket Ekle</button>
 
+            <div class="grid-3">
+              <div class="form-group">
+                <label class="form-label" for="fitness-duration-h">Saat</label>
+                <input class="form-control" type="number" id="fitness-duration-h" min="0" max="23" value="0">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="fitness-duration-m">Dakika</label>
+                <input class="form-control" type="number" id="fitness-duration-m" min="0" max="59" value="45">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="fitness-duration-s">Saniye</label>
+                <input class="form-control" type="number" id="fitness-duration-s" min="0" max="59" value="0">
+              </div>
+            </div>
+
             <div class="form-group">
               <label class="form-label" for="fitness-rpe">Zorluk Seviyesi (RPE: <span id="fitness-rpe-val" class="font-bold text-blue">6</span>/10)</label>
               <input type="range" id="fitness-rpe" min="1" max="10" value="6" step="1" style="width:100%; margin-top:8px;">
@@ -676,9 +691,9 @@
         <svg viewBox="0 0 24 24" width="22" height="22">
           <path fill="currentColor" d="M17,14H19V17H22V19H19V22H17V19H14V17H17V14M12.8,5.15C12.45,5.15 12.1,5.3 11.85,5.55L4.7,12.7C4.2,13.2 4.2,14 4.7,14.5L9.5,19.3C10,19.8 10.8,19.8 11.3,19.3L18.45,12.15C18.7,11.9 18.85,11.55 18.85,11.2C18.85,10.85 18.7,10.5 18.45,10.25L13.75,5.55C13.5,5.3 13.15,5.15 12.8,5.15M12.8,7.28L16.73,11.2L11.3,16.63L7.38,12.7L12.8,7.28Z" />
         </svg>
-        <span>Kaydet</span>
+        <span>Antrenman</span>
       </button>
-      
+
       <button class="bottom-nav-item" data-view="analysis">
         <svg viewBox="0 0 24 24" width="22" height="22">
           <path fill="currentColor" d="M22,21H2V3H4V19H6V10H10V19H12V6H16V19H18V14H22V21Z" />
@@ -721,7 +736,7 @@
           </div>
           <div class="grid-2">
             <div class="form-group">
-              <label class="form-label" for="plan-target-distance">Mesafe Hedefi (km/m)</label>
+              <label class="form-label" for="plan-target-distance" id="plan-distance-label">Mesafe Hedefi (km)</label>
               <input class="form-control" type="number" id="plan-target-distance" step="0.1" placeholder="Mesafe">
             </div>
             <div class="form-group">
@@ -804,7 +819,7 @@
         
         <!-- Manuel Besin Ekleme Formu -->
         <div class="manual-food-section">
-          <button id="toggle-manual-food-btn" class="btn btn-ghost btn-full" style="padding:10px; font-size:13px; border-radius:10px;">Listedebulamadın mı? Manuel Gıda Ekle</button>
+          <button id="toggle-manual-food-btn" class="btn btn-ghost btn-full" style="padding:10px; font-size:13px; border-radius:10px;">Listede bulamadın mı? Manuel Gıda Ekle</button>
           
           <form id="form-manual-food" class="hidden mt-3">
             <div class="form-group">
@@ -973,7 +988,7 @@
   </div>
 
   <!-- Javascripts -->
-  <script src="foods.js?v=1.12"></script>
-  <script src="app.js?v=1.12"></script>
+  <script src="foods.js?v=1.13"></script>
+  <script src="app.js?v=1.13"></script>
 </body>
 </html>
