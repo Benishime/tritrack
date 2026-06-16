@@ -2056,6 +2056,7 @@ function initProfileView() {
   document.getElementById('settings-p-target').value = state.profile.targetMacros.protein || 150;
   document.getElementById('settings-c-target').value = state.profile.targetMacros.carbs || 300;
   document.getElementById('settings-f-target').value = state.profile.targetMacros.fat || 70;
+  document.getElementById('settings-max-hr').value = state.profile.maxHr || '';
   document.getElementById('settings-gemini-key').value = state.profile.geminiApiKey || '';
 
   updateAiBadge();
@@ -2069,6 +2070,8 @@ function initProfileView() {
     state.profile.targetMacros.protein = parseInt(document.getElementById('settings-p-target').value);
     state.profile.targetMacros.carbs = parseInt(document.getElementById('settings-c-target').value);
     state.profile.targetMacros.fat = parseInt(document.getElementById('settings-f-target').value);
+    const maxHrVal = parseInt(document.getElementById('settings-max-hr').value);
+    state.profile.maxHr = isNaN(maxHrVal) ? null : maxHrVal;
     state.profile.geminiApiKey = document.getElementById('settings-gemini-key').value;
 
     saveState();
@@ -2405,24 +2408,16 @@ function handleCoachChat(userText) {
   const apiKey = state.profile.geminiApiKey;
 
   if (apiKey) {
-    const d = gatherCoachData();
-    const ctx = `Sporcunun güncel durumu — Bugün: uyku ${d.body.sleep != null ? d.body.sleep + 's' : '-'}, uyku puanı ${d.body.sleepScore != null ? d.body.sleepScore : '-'}, HRV ${d.body.hrv != null ? d.body.hrv + 'ms' : '-'}, diyet ${Math.round(d.diet.cal)}kcal/P${Math.round(d.diet.p)}g. Bu hafta yük ${d.load.thisWeek}dk (geçen hafta ${d.load.lastWeek}dk). Hazır olma: ${d.readiness ? d.readiness.label : '-'}.`;
-
-    const systemPrompt = `Sen ${state.profile.name} adlı sporcunun triatlon ve koşu antrenörüsün.
-Sadece spor, antrenman (yüzme/bisiklet/koşu/güç), sporcu beslenmesi, diyet, uyku ve toparlanma konularına cevap ver.
-Alakasız sorularda kibarca sadece antrenör olduğunu belirt. Türkçe konuş; kısa, motive edici ve net ol. Mümkünse sporcunun güncel verisine atıfta bulun.`;
-
-    const chatHistoryContext = `${systemPrompt}\n\n${ctx}\n\nKullanıcı Sorusu: ${userText}\nCevap:`;
-
-    callGeminiAPI(apiKey, chatHistoryContext)
+    // Araç (function calling) destekli agent: okuma + (onaylı) yazma
+    runAssistantAgent(apiKey, userText, loader)
       .then(reply => {
         loader.remove();
-        appendChatMessage('bot', reply);
+        if (reply) appendChatMessage('bot', reply);
       })
       .catch(err => {
-        console.error("Chat Gemini API hatası", err);
+        console.error("Asistan hatası", err);
         loader.remove();
-        appendChatMessage('bot', "Üzgünüm, API anahtarınız ile bağlantı kurulurken bir sorun oluştu. Lütfen profil sayfasından anahtarınızı kontrol edin.");
+        appendChatMessage('bot', "Üzgünüm, bağlantıda sorun oldu: " + err.message + ". Profil'den API anahtarını kontrol et.");
       });
   } else {
     setTimeout(() => {
@@ -2448,6 +2443,259 @@ Alakasız sorularda kibarca sadece antrenör olduğunu belirt. Türkçe konuş; 
       appendChatMessage('bot', reply);
     }, 1000);
   }
+}
+
+// ==========================================
+// 9.5. AI ASİSTAN ARAÇLARI (GEMINI FUNCTION CALLING)
+// ==========================================
+
+// --- Eylem (yazma) çalıştırıcıları: state'i günceller, kaydeder, ekranı yeniler ---
+function aiAddWorkout(a) {
+  const date = a.date || currentDateStr;
+  const durationSec = a.durationMin ? Math.round(a.durationMin * 60) : 0;
+  const w = {
+    id: 'w_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+    date, sport: a.sport, duration: durationSec,
+    rpe: (a.rpe != null) ? a.rpe : 5,
+    notes: a.notes || ''
+  };
+  if (a.hr != null) w.hr = a.hr;
+  if (a.sport === 'swim') { w.distance = a.distance || 0; w.pace = computePacePer100m(a.distance || 0, durationSec); }
+  else if (a.sport === 'bike') { w.distance = a.distance || 0; w.pace = computeSpeed(a.distance || 0, durationSec); }
+  else if (a.sport === 'fitness') { w.exercises = []; }
+  else { w.distance = a.distance || 0; w.pace = computePacePerKm(a.distance || 0, durationSec); }
+  state.workouts.push(w);
+  saveState(); renderTodayView();
+  return { ok: true, message: `${(SPORT_META[a.sport] || {}).name || a.sport} antrenmanı ${date} tarihine eklendi.` };
+}
+
+function aiAddPlan(a) {
+  const plan = {
+    id: 'p_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+    date: a.date || currentDateStr, sport: a.sport,
+    targetDistance: (a.targetDistance != null) ? a.targetDistance : null,
+    targetDuration: (a.targetDurationMin != null) ? a.targetDurationMin : null,
+    details: a.details || '', completed: false
+  };
+  state.plans.push(plan);
+  saveState(); renderProgramView(); renderTodayView();
+  return { ok: true, message: `${(SPORT_META[a.sport] || {}).name || a.sport} planı ${plan.date} tarihine eklendi.` };
+}
+
+function aiSetBody(a) {
+  const date = a.date || currentDateStr;
+  const log = state.holisticLogs[date] || (state.holisticLogs[date] = {});
+  if (a.sleep != null) log.sleep = a.sleep;
+  if (a.sleepScore != null) log.sleepScore = a.sleepScore;
+  if (a.hrv != null) log.hrv = a.hrv;
+  if (a.weight != null) { log.weight = a.weight; state.profile.weight = a.weight; }
+  saveState(); renderTodayView();
+  return { ok: true, message: `${date} vücut durumu kaydedildi.` };
+}
+
+function aiAddFood(a) {
+  const food = {
+    id: 'fd_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+    date: a.date || currentDateStr, meal: a.meal || 'snack', name: a.name || 'Besin',
+    calories: a.calories || 0, protein: a.protein || 0, carbs: a.carbs || 0, fat: a.fat || 0,
+    quantity: 1, unit: 'piece'
+  };
+  state.diet.push(food);
+  saveState(); if (typeof renderDietView === 'function') renderDietView(); renderTodayView();
+  return { ok: true, message: `"${food.name}" tüketilenlere eklendi.` };
+}
+
+function aiUpdateGoals(a) {
+  if (a.calories != null) state.profile.targetDailyCalories = a.calories;
+  if (!state.profile.targetMacros) state.profile.targetMacros = {};
+  if (a.protein != null) state.profile.targetMacros.protein = a.protein;
+  if (a.carbs != null) state.profile.targetMacros.carbs = a.carbs;
+  if (a.fat != null) state.profile.targetMacros.fat = a.fat;
+  saveState(); renderTodayView();
+  return { ok: true, message: 'Hedefler güncellendi.' };
+}
+
+// --- Okuma çalıştırıcısı (onay gerektirmez) ---
+function aiGetDay(a) {
+  const date = a.date || currentDateStr;
+  const workouts = state.workouts.filter(w => w.date === date)
+    .map(w => ({ sport: w.sport, dakika: Math.round((w.duration || 0) / 60), mesafe: w.distance || 0, rpe: w.rpe, not: w.notes || '' }));
+  const dietItems = state.diet.filter(f => f.date === date);
+  const dietTot = dietItems.reduce((s, f) => ({ cal: s.cal + f.calories, p: s.p + f.protein }), { cal: 0, p: 0 });
+  const body = state.holisticLogs[date] || {};
+  const plans = state.plans.filter(p => p.date === date).map(p => ({ sport: p.sport, detay: p.details, tamamlandi: p.completed }));
+  return { tarih: date, antrenmanlar: workouts, diyetKcal: Math.round(dietTot.cal), diyetProtein: Math.round(dietTot.p), vucut: body, planlar: plans };
+}
+
+// --- Araç kayıt defteri (Gemini declarations + çalıştırıcı + onay özeti) ---
+const AI_TOOLS = [
+  {
+    name: 'antrenmanEkle', write: true, run: aiAddWorkout,
+    summary: a => `🏋️ ${(SPORT_META[a.sport] || {}).name || a.sport}${a.distance ? ' · ' + (a.sport === 'swim' ? a.distance + 'm' : a.distance + 'km') : ''}${a.durationMin ? ' · ' + a.durationMin + 'dk' : ''} · ${a.date || 'bugün'} — yapılan olarak eklensin mi?`,
+    declaration: {
+      name: 'antrenmanEkle', description: 'Yapılan (tamamlanmış) bir antrenmanı kaydeder.',
+      parameters: { type: 'object', properties: {
+        sport: { type: 'string', enum: ['run', 'bike', 'swim', 'fitness'], description: 'Branş' },
+        date: { type: 'string', description: 'YYYY-MM-DD; verilmezse bugün' },
+        distance: { type: 'number', description: 'Mesafe — koşu/bisiklet km, yüzme metre' },
+        durationMin: { type: 'number', description: 'Süre (dakika)' },
+        hr: { type: 'number', description: 'Ortalama nabız' },
+        rpe: { type: 'number', description: 'Zorluk 1-10' },
+        notes: { type: 'string', description: 'Not' }
+      }, required: ['sport'] }
+    }
+  },
+  {
+    name: 'antrenmanPlaniEkle', write: true, run: aiAddPlan,
+    summary: a => `📅 Plan: ${(SPORT_META[a.sport] || {}).name || a.sport}${a.targetDistance ? ' · ' + a.targetDistance : ''}${a.details ? ' · ' + a.details : ''} · ${a.date || 'bugün'} — eklensin mi?`,
+    declaration: {
+      name: 'antrenmanPlaniEkle', description: 'İleri/bugün için bir antrenman planı ekler.',
+      parameters: { type: 'object', properties: {
+        sport: { type: 'string', enum: ['run', 'bike', 'swim', 'fitness'] },
+        date: { type: 'string', description: 'YYYY-MM-DD; verilmezse bugün' },
+        targetDistance: { type: 'number', description: 'Hedef mesafe (koşu/bisiklet km, yüzme metre)' },
+        targetDurationMin: { type: 'number', description: 'Hedef süre (dakika)' },
+        details: { type: 'string', description: 'Plan detayı, örn. "5x1000m tempo"' }
+      }, required: ['sport'] }
+    }
+  },
+  {
+    name: 'vucutDurumuKaydet', write: true, run: aiSetBody,
+    summary: a => `🩺 ${a.date || 'bugün'}: ${[a.sleep != null ? 'uyku ' + a.sleep + 'sa' : '', a.sleepScore != null ? 'puan ' + a.sleepScore : '', a.hrv != null ? 'HRV ' + a.hrv : '', a.weight != null ? a.weight + 'kg' : ''].filter(Boolean).join(', ')} — kaydedilsin mi?`,
+    declaration: {
+      name: 'vucutDurumuKaydet', description: 'Bir günün uyku, uyku puanı, HRV ve/veya kilo değerini kaydeder.',
+      parameters: { type: 'object', properties: {
+        date: { type: 'string', description: 'YYYY-MM-DD; verilmezse bugün' },
+        sleep: { type: 'number', description: 'Uyku saati' },
+        sleepScore: { type: 'number', description: 'Uyku puanı 0-100' },
+        hrv: { type: 'number', description: 'HRV (ms)' },
+        weight: { type: 'number', description: 'Kilo (kg)' }
+      }, required: [] }
+    }
+  },
+  {
+    name: 'besinEkle', write: true, run: aiAddFood,
+    summary: a => `🍽 ${a.name || 'Besin'} · ${a.calories || 0}kcal${a.protein ? ' · P' + a.protein : ''} · ${a.date || 'bugün'} — tüketilenlere eklensin mi?`,
+    declaration: {
+      name: 'besinEkle', description: 'Tüketilen bir besini günlüğe ekler.',
+      parameters: { type: 'object', properties: {
+        name: { type: 'string', description: 'Besin adı' },
+        meal: { type: 'string', enum: ['breakfast', 'lunch', 'dinner', 'snack'], description: 'Öğün' },
+        calories: { type: 'number' }, protein: { type: 'number' }, carbs: { type: 'number' }, fat: { type: 'number' },
+        date: { type: 'string', description: 'YYYY-MM-DD; verilmezse bugün' }
+      }, required: ['name'] }
+    }
+  },
+  {
+    name: 'hedefGuncelle', write: true, run: aiUpdateGoals,
+    summary: a => `🎯 Hedef: ${[a.calories != null ? a.calories + 'kcal' : '', a.protein != null ? 'P' + a.protein : '', a.carbs != null ? 'K' + a.carbs : '', a.fat != null ? 'Y' + a.fat : ''].filter(Boolean).join(', ')} — güncellensin mi?`,
+    declaration: {
+      name: 'hedefGuncelle', description: 'Günlük kalori ve makro hedeflerini günceller.',
+      parameters: { type: 'object', properties: {
+        calories: { type: 'number' }, protein: { type: 'number' }, carbs: { type: 'number' }, fat: { type: 'number' }
+      }, required: [] }
+    }
+  },
+  {
+    name: 'gunVerisiniGetir', write: false, run: aiGetDay,
+    declaration: {
+      name: 'gunVerisiniGetir', description: 'Belirli bir günün antrenman, diyet, vücut ve plan verilerini getirir.',
+      parameters: { type: 'object', properties: {
+        date: { type: 'string', description: 'YYYY-MM-DD; verilmezse bugün' }
+      }, required: [] }
+    }
+  }
+];
+
+function assistantSystemPrompt() {
+  const d = gatherCoachData();
+  const p = state.profile;
+  return `Sen ${p.name || 'sporcu'} için triatlon ve koşu antrenörü/asistanısın. Türkçe, kısa ve net konuş.
+Bugünün tarihi: ${currentDateStr}.
+Kullanıcı bir şey eklemeni/kaydetmeni isterse uygun ARACI çağır (antrenmanEkle, antrenmanPlaniEkle, vucutDurumuKaydet, besinEkle, hedefGuncelle). Geçmiş veri lazımsa gunVerisiniGetir aracını kullan.
+Kurallar: Tarih verilmezse bugünü kullan. Yüzme mesafesi METRE, koşu/bisiklet KM. Emin değilsen kullanıcıya sor; uydurma.
+Güncel durum: bugün uyku ${d.body.sleep != null ? d.body.sleep : '-'}/puan ${d.body.sleepScore != null ? d.body.sleepScore : '-'}, HRV ${d.body.hrv != null ? d.body.hrv : '-'}; bu hafta yük ${d.load.thisWeek}dk; hazır olma ${d.readiness ? d.readiness.label : '-'}.
+Sadece spor, antrenman, beslenme, uyku ve toparlanma konularında yardım et.`;
+}
+
+async function geminiGenerate(apiKey, contents, systemText, tools) {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`;
+  const body = { contents };
+  if (systemText) body.systemInstruction = { parts: [{ text: systemText }] };
+  if (tools) body.tools = tools;
+  const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  if (!res.ok) throw new Error('Gemini HTTP ' + res.status);
+  const data = await res.json();
+  if (!data.candidates || !data.candidates[0]) throw new Error('Geçersiz yanıt');
+  return data.candidates[0];
+}
+
+// Sohbette onay kartı göster; Promise<boolean> döndürür
+function aiConfirmAction(summaryText) {
+  return new Promise(resolve => {
+    const container = document.getElementById('ai-chat-output');
+    const chip = document.createElement('div');
+    chip.className = 'ai-confirm-chip';
+    chip.innerHTML = `
+      <div class="ai-confirm-text">${escapeHtml(summaryText)}</div>
+      <div class="ai-confirm-actions">
+        <button class="btn btn-primary ai-confirm-yes" style="padding:6px 14px; font-size:12px;">✅ Onayla</button>
+        <button class="btn btn-ghost ai-confirm-no" style="padding:6px 14px; font-size:12px;">✖ Vazgeç</button>
+      </div>`;
+    container.appendChild(chip);
+    container.scrollTop = container.scrollHeight;
+    const done = (label, val) => {
+      chip.querySelector('.ai-confirm-actions').innerHTML = `<span class="text-xs text-muted">${label}</span>`;
+      resolve(val);
+    };
+    chip.querySelector('.ai-confirm-yes').addEventListener('click', () => done('✅ Onaylandı', true));
+    chip.querySelector('.ai-confirm-no').addEventListener('click', () => done('✖ Vazgeçildi', false));
+  });
+}
+
+// Agent döngüsü: model → (araç çağrısı → onay/çalıştır → sonuç) → final metin
+async function runAssistantAgent(apiKey, userText, loader) {
+  const sys = assistantSystemPrompt();
+  const tools = [{ functionDeclarations: AI_TOOLS.map(t => t.declaration) }];
+  const contents = [{ role: 'user', parts: [{ text: userText }] }];
+
+  for (let step = 0; step < 6; step++) {
+    if (loader && !loader.isConnected) {
+      document.getElementById('ai-chat-output').appendChild(loader);
+    }
+    const cand = await geminiGenerate(apiKey, contents, sys, tools);
+    const parts = (cand.content && cand.content.parts) || [];
+    const fcPart = parts.find(p => p.functionCall);
+
+    if (!fcPart) {
+      const text = parts.map(p => p.text).filter(Boolean).join('\n').trim();
+      return text || 'Tamam.';
+    }
+
+    contents.push(cand.content); // modelin araç çağrısı turu
+    const fc = fcPart.functionCall;
+    const tool = AI_TOOLS.find(t => t.name === fc.name);
+    const args = fc.args || {};
+    let result;
+
+    if (!tool) {
+      result = { error: 'Bilinmeyen araç: ' + fc.name };
+    } else if (tool.write) {
+      if (loader) loader.remove(); // "düşünüyor"u gizle, onay kartını göster
+      const ok = await aiConfirmAction(tool.summary(args));
+      if (ok) {
+        try { result = tool.run(args); showToast(result.message || 'Eklendi ✅'); }
+        catch (e) { result = { error: e.message }; }
+      } else {
+        result = { cancelled: true, message: 'Kullanıcı bu işlemi onaylamadı.' };
+      }
+    } else {
+      try { result = tool.run(args); } catch (e) { result = { error: e.message }; }
+    }
+
+    contents.push({ role: 'user', parts: [{ functionResponse: { name: fc.name, response: result } }] });
+  }
+  return 'İşlem çok uzadı, lütfen tekrar dener misin?';
 }
 
 // ==========================================
@@ -2827,6 +3075,11 @@ function renderAnalysisView() {
   renderSportDistChart();
   renderSleepChart();
   renderHrvChart();
+  renderLoadBalanceChart();   // Faz C: Form & Yük (CTL/ATL/TSB)
+  renderPersonalRecords();    // Faz B: Kişisel Rekorlar
+  renderHrZones();            // Faz D: Nabız Bölgeleri
+  renderWeightChart();        // Faz A: Kilo Trendi
+  renderCalorieChart();       // Faz A: Kalori Trendi
 }
 
 // Son N günün holistic loglarını {label, value} dizisine çevir
@@ -2975,6 +3228,293 @@ function renderHrvChart() {
   }
 
   container.innerHTML = buildLineChartSVG(series, { color: 'var(--color-yuzme)', valueSuffix: '' });
+}
+
+// ============ FAZ A: KİLO & KALORİ TREND GRAFİKLERİ ============
+
+// --- Kilo Trendi (son 30 gün çizgi) ---
+function renderWeightChart() {
+  const container = document.getElementById('chart-weight');
+  if (!container) return;
+  const series = collectDailySeries('weight', 30);
+
+  const cur = avgOf(holisticValues('weight', 0, 6));
+  const prev = avgOf(holisticValues('weight', 7, 13));
+  const trend = makeTrend(cur, prev, null, d => `${d.toFixed(1)}kg`); // nötr: artış/azalış hedefe göre değişir
+  let insight;
+  if (cur == null) insight = 'Henüz kilo girilmemiş. Günlük Vücut Durumu kartından girebilirsin.';
+  else if (prev == null) insight = `Güncel kilon ${cur.toFixed(1)} kg. Trendi görmek için birkaç gün daha gir.`;
+  else {
+    const diff = cur - prev;
+    if (Math.abs(diff) < 0.2) insight = `Kilon stabil (~${cur.toFixed(1)} kg).`;
+    else insight = `Son haftada ${diff > 0 ? '+' : ''}${diff.toFixed(1)} kg (ort. ${cur.toFixed(1)} kg).`;
+  }
+  setGlance('weight', glanceTop(cur != null ? cur.toFixed(1) : '–', 'kg', 'son 7 gün ort.', trend), insight);
+
+  if (!series.some(p => p.value != null)) {
+    container.innerHTML = '<p class="chart-empty">Henüz kilo verisi girilmemiş.</p>';
+    return;
+  }
+  container.innerHTML = buildLineChartSVG(series, { color: 'var(--accent-blue)', valueSuffix: '' });
+}
+
+// Son N günün günlük tüketilen kalori toplamını {label, value} dizisine çevir
+function collectCalorieSeries(days) {
+  const out = [];
+  for (let i = days - 1; i >= 0; i--) {
+    const ds = addDaysStr(currentDateStr, -i);
+    const d = new Date(ds);
+    const total = state.diet
+      .filter(f => f.date === ds)
+      .reduce((s, f) => s + (f.calories || 0), 0);
+    out.push({ label: `${d.getDate()}`, value: total > 0 ? Math.round(total) : null });
+  }
+  return out;
+}
+
+// Bir gün aralığındaki günlük kalori toplamları (offset 0 = currentDate)
+function calorieValues(fromOffset, toOffset) {
+  const arr = [];
+  for (let i = fromOffset; i <= toOffset; i++) {
+    const ds = addDaysStr(currentDateStr, -i);
+    const total = state.diet.filter(f => f.date === ds).reduce((s, f) => s + (f.calories || 0), 0);
+    if (total > 0) arr.push(Math.round(total));
+  }
+  return arr;
+}
+
+// --- Kalori Trendi (son 14 gün çizgi) ---
+function renderCalorieChart() {
+  const container = document.getElementById('chart-calories');
+  if (!container) return;
+  const series = collectCalorieSeries(14);
+
+  const cur = avgOf(calorieValues(0, 6));
+  const prev = avgOf(calorieValues(7, 13));
+  const target = state.profile.targetDailyCalories || null;
+  const trend = makeTrend(cur, prev, null, d => `${Math.round(d)} kcal`);
+  let insight;
+  if (cur == null) insight = 'Henüz besin girişi yok. Diyet sekmesinden ekleyebilirsin.';
+  else if (target) {
+    const diff = Math.round(cur - target);
+    if (Math.abs(diff) < 150) insight = `Ort. ${Math.round(cur)} kcal — hedefine (${target}) çok yakınsın 👍`;
+    else if (diff < 0) insight = `Ort. ${Math.round(cur)} kcal, hedefin ${Math.abs(diff)} kcal altında.`;
+    else insight = `Ort. ${Math.round(cur)} kcal, hedefin ${diff} kcal üzerinde.`;
+  } else insight = `Son 7 gün ort. ${Math.round(cur)} kcal.`;
+  setGlance('calories', glanceTop(cur != null ? Math.round(cur) : '–', 'kcal', 'son 7 gün ort.', trend), insight);
+
+  if (!series.some(p => p.value != null)) {
+    container.innerHTML = '<p class="chart-empty">Henüz kalori verisi yok.</p>';
+    return;
+  }
+  container.innerHTML = buildLineChartSVG(series, { color: 'var(--color-kosu)', yMin: 0, valueSuffix: '' });
+}
+
+// ============ FAZ B: KİŞİSEL REKORLAR (PR) ============
+
+// Antrenmanlardan kişisel rekorları türet (eksik veriye dayanıklı)
+function computePersonalRecords() {
+  const ws = state.workouts || [];
+  const runs = ws.filter(w => w.sport === 'run' && w.distance > 0 && w.duration > 0);
+  const bikes = ws.filter(w => w.sport === 'bike' && w.distance > 0 && w.duration > 0);
+
+  const recs = [];
+
+  // En uzun koşu
+  const longestRun = runs.reduce((a, b) => (b.distance > (a?.distance || 0) ? b : a), null);
+  if (longestRun) recs.push({ value: `${Math.round(longestRun.distance * 10) / 10} km`, label: '🏃 En Uzun Koşu' });
+
+  // Koşuda en iyi tempo (mesafe ≥ 3 km kayıtlar arasında en düşük dk/km)
+  const pacedRuns = runs.filter(w => w.distance >= 3).map(w => ({ pace: (w.duration / 60) / w.distance, w }));
+  const bestPace = pacedRuns.reduce((a, b) => (b.pace < (a?.pace ?? Infinity) ? b : a), null);
+  if (bestPace) {
+    const m = Math.floor(bestPace.pace), s = Math.round((bestPace.pace - m) * 60);
+    recs.push({ value: `${m}:${String(s).padStart(2, '0')}`, label: '⚡ En İyi Tempo (dk/km)' });
+  }
+
+  // En uzun bisiklet
+  const longestBike = bikes.reduce((a, b) => (b.distance > (a?.distance || 0) ? b : a), null);
+  if (longestBike) recs.push({ value: `${Math.round(longestBike.distance * 10) / 10} km`, label: '🚴 En Uzun Sürüş' });
+
+  // Bisiklette en yüksek hız (km/sa)
+  const fastestBike = bikes.reduce((a, b) => {
+    const sp = b.distance / (b.duration / 3600);
+    return (sp > (a?.speed || 0) ? { speed: sp, w: b } : a);
+  }, null);
+  if (fastestBike) recs.push({ value: `${Math.round(fastestBike.speed * 10) / 10} km/sa`, label: '💨 En Hızlı Sürüş' });
+
+  // En uzun süreli tek antrenman (tüm branşlar)
+  const longestDur = ws.reduce((a, b) => ((b.duration || 0) > (a?.duration || 0) ? b : a), null);
+  if (longestDur && longestDur.duration > 0) recs.push({ value: fmtMinutes(longestDur.duration / 60), label: '⏱️ En Uzun Antrenman' });
+
+  // En yüksek tek hafta toplam km (koşu+bisiklet)
+  const weekKm = {};
+  ws.forEach(w => {
+    if ((w.sport === 'run' || w.sport === 'bike') && w.distance > 0) {
+      const mon = mondayOf(w.date);
+      weekKm[mon] = (weekKm[mon] || 0) + w.distance;
+    }
+  });
+  const bestWeek = Object.values(weekKm).reduce((a, b) => Math.max(a, b), 0);
+  if (bestWeek > 0) recs.push({ value: `${Math.round(bestWeek * 10) / 10} km`, label: '📅 En Yüksek Haftalık Mesafe' });
+
+  return recs;
+}
+
+function renderPersonalRecords() {
+  const grid = document.getElementById('pr-grid');
+  if (!grid) return;
+  const recs = computePersonalRecords();
+  if (recs.length === 0) {
+    grid.innerHTML = '<p class="chart-empty">Mesafe/süre içeren antrenman ekledikçe rekorların burada birikir 🏅</p>';
+    return;
+  }
+  grid.innerHTML = recs.map(r => `
+    <div class="analysis-stat-card">
+      <div class="stat-value">${r.value}</div>
+      <div class="stat-label">${r.label}</div>
+    </div>`).join('');
+}
+
+// ============ FAZ C: ANTRENMAN YÜKÜ (CTL / ATL / TSB) ============
+
+// Bir günün antrenman yükü = Σ (rpe||5) × süre(dk) (basit TRIMP)
+function dailyLoadOn(dateStr) {
+  return state.workouts
+    .filter(w => w.date === dateStr)
+    .reduce((sum, w) => sum + ((typeof w.rpe === 'number' ? w.rpe : 5) * ((w.duration || 0) / 60)), 0);
+}
+
+// EWMA ile Fitness (CTL, 42g), Yorgunluk (ATL, 7g), Form (TSB = dünkü CTL−ATL)
+// Son `tailDays` günü {label, ctl, atl} dizisi olarak döndürür + güncel form değeri
+function computeFitnessFatigue(tailDays = 28) {
+  const HISTORY = 90; // ısınma için yeterli geçmiş
+  const ctlK = 2 / (42 + 1), atlK = 2 / (7 + 1);
+  let ctl = 0, atl = 0;
+  let prevCtl = 0, prevAtl = 0;
+  const out = [];
+  for (let i = HISTORY - 1; i >= 0; i--) {
+    const ds = addDaysStr(currentDateStr, -i);
+    const load = dailyLoadOn(ds);
+    prevCtl = ctl; prevAtl = atl;
+    ctl = ctl + (load - ctl) * ctlK;
+    atl = atl + (load - atl) * atlK;
+    if (i < tailDays) {
+      const d = new Date(ds);
+      out.push({ label: `${d.getDate()}`, ctl, atl, form: prevCtl - prevAtl });
+    }
+  }
+  const todayForm = prevCtl - prevAtl; // son günün başındaki form
+  return { series: out, form: todayForm, ctl, atl };
+}
+
+// İki seri (CTL + ATL) çizgi grafiği — renderSleepChart desenini taklit eder
+function renderLoadBalanceChart() {
+  const container = document.getElementById('chart-load-balance');
+  const legendEl = document.getElementById('chart-load-balance-legend');
+  if (!container) return;
+
+  const { series, form } = computeFitnessFatigue(28);
+  const hasLoad = series.some(p => p.ctl > 0.5 || p.atl > 0.5);
+
+  // Glance: güncel Form değeri + yorum
+  const formRounded = Math.round(form);
+  let tone = 'flat', insight;
+  if (!hasLoad) { insight = 'Yük hesabı için birkaç antrenman kaydet (RPE + süre).'; }
+  else if (form > 5) { tone = 'up'; insight = `Form +${formRounded}: tazesin, yoğun/yarış antrenmanına hazırsın 💪`; }
+  else if (form >= -10) { insight = `Form ${formRounded}: dengedesin, planına devam.`; }
+  else if (form >= -20) { tone = 'down'; insight = `Form ${formRounded}: yorgunluk birikiyor, yoğunluğu biraz azalt.`; }
+  else { tone = 'down'; insight = `Form ${formRounded}: belirgin yorgunluk — toparlanma/dinlenme günü iyi olur.`; }
+  setGlance('loadbal', glanceTop(hasLoad ? (form > 0 ? `+${formRounded}` : `${formRounded}`) : '–', 'form', 'CTL − ATL', tone === 'flat' ? null : { text: tone === 'up' ? '▲ taze' : '▼ yorgun', tone }), insight);
+
+  if (!hasLoad) {
+    container.innerHTML = '<p class="chart-empty">Henüz yük verisi yok.</p>';
+    legendEl.innerHTML = '';
+    return;
+  }
+
+  const W = 320, H = 170, left = 30, right = 8, top = 12, bottom = 20;
+  const plotW = W - left - right, plotH = H - top - bottom;
+  const n = series.length;
+  const xAt = i => left + (n === 1 ? plotW / 2 : (i / (n - 1)) * plotW);
+  const maxV = Math.max(1, ...series.map(p => Math.max(p.ctl, p.atl)));
+  const yAt = v => top + plotH - (v / maxV) * plotH;
+
+  const line = (key, color) => {
+    const pts = series.map((p, i) => `${xAt(i).toFixed(1)},${yAt(p[key]).toFixed(1)}`).join(' ');
+    return `<polyline points="${pts}" fill="none" style="stroke:${color}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"></polyline>`;
+  };
+  const axis = `
+    <line x1="${left}" y1="${top + plotH}" x2="${W - right}" y2="${top + plotH}" style="stroke:var(--card-border)" stroke-width="1"></line>
+    <text x="${left - 4}" y="${top + 6}" text-anchor="end" font-size="9" style="fill:var(--text-muted)">${Math.round(maxV)}</text>
+    <text x="${left - 4}" y="${top + plotH}" text-anchor="end" font-size="9" style="fill:var(--text-muted)">0</text>`;
+  const xlabels = series.map((p, i) => (i % 4 === 0)
+    ? `<text x="${xAt(i).toFixed(1)}" y="${H - 5}" text-anchor="middle" font-size="8" style="fill:var(--text-muted)">${p.label}</text>` : '').join('');
+
+  container.innerHTML = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">${axis}${xlabels}${line('ctl', 'var(--accent-blue)')}${line('atl', 'var(--color-kosu)')}</svg>`;
+  legendEl.innerHTML = `
+    <div class="chart-legend-item"><span class="chart-legend-dot" style="background:var(--accent-blue)"></span>Fitness (CTL · 42g)</div>
+    <div class="chart-legend-item"><span class="chart-legend-dot" style="background:var(--color-kosu)"></span>Yorgunluk (ATL · 7g)</div>`;
+}
+
+// ============ FAZ D: NABIZ BÖLGELERİ (HR ZONES) ============
+
+// Nabzı maxHr'ye göre Z1–Z5'e ata
+function hrZoneOf(hr, maxHr) {
+  const pct = hr / maxHr;
+  if (pct < 0.60) return 0; // Z1
+  if (pct < 0.70) return 1; // Z2
+  if (pct < 0.80) return 2; // Z3
+  if (pct < 0.90) return 3; // Z4
+  return 4;                 // Z5
+}
+
+const HR_ZONE_META = [
+  { name: 'Z1 Toparlanma', color: '#3b82f6' },
+  { name: 'Z2 Dayanıklılık', color: '#10b981' },
+  { name: 'Z3 Tempo', color: '#f59e0b' },
+  { name: 'Z4 Eşik', color: '#f97316' },
+  { name: 'Z5 Maksimum', color: '#ef4444' }
+];
+
+// --- Nabız Bölgeleri: süreye göre Z1–Z5 dağılımı (yatay barlar) ---
+function renderHrZones() {
+  const container = document.getElementById('chart-hr-zones');
+  if (!container) return;
+  const maxHr = state.profile.maxHr || 190;
+
+  const DAYS = 28;
+  const since = addDaysStr(currentDateStr, -(DAYS - 1));
+  const zoneSec = [0, 0, 0, 0, 0];
+  state.workouts.forEach(w => {
+    if (w.date >= since && w.date <= currentDateStr && typeof w.hr === 'number' && w.hr > 0 && w.duration > 0) {
+      zoneSec[hrZoneOf(w.hr, maxHr)] += w.duration;
+    }
+  });
+  const total = zoneSec.reduce((a, b) => a + b, 0);
+
+  if (total === 0) {
+    setGlance('hrzone', glanceTop('–', '', `son ${DAYS} gün`, null), '');
+    container.innerHTML = '<p class="chart-empty">Nabızlı antrenman yok. GPX içe aktar veya kayıtta nabız gir.</p>';
+    return;
+  }
+
+  // Glance: en çok zaman geçirilen bölge
+  const domIdx = zoneSec.indexOf(Math.max(...zoneSec));
+  const domPct = Math.round((zoneSec[domIdx] / total) * 100);
+  setGlance('hrzone',
+    glanceTop(HR_ZONE_META[domIdx].name.split(' ')[0], '', `%${domPct} · en çok bölge (maxHR ${maxHr})`, null),
+    `Son ${DAYS} günün ağırlığı ${HR_ZONE_META[domIdx].name}. Dengeli gelişim için düşük yoğunluk (Z1–Z2) hacmini koru.`);
+
+  container.innerHTML = HR_ZONE_META.map((z, i) => {
+    const pct = Math.round((zoneSec[i] / total) * 100);
+    return `
+      <div class="hr-zone-row">
+        <span class="hr-zone-label">${z.name}</span>
+        <div class="hr-zone-track"><div class="hr-zone-fill" style="width:${pct}%; background:${z.color};"></div></div>
+        <span class="hr-zone-pct">${pct}%</span>
+      </div>`;
+  }).join('');
 }
 
 // --- Glanceable başlık yardımcıları ---

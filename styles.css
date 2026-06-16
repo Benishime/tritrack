@@ -1588,3 +1588,61 @@ button#theme-toggle {
   opacity: 0.9;
 }
 .workout-done-row .checklist-title { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+
+/* Analiz: Nabız Bölgeleri (Z1–Z5 yatay barlar) */
+.hr-zone-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 0;
+}
+.hr-zone-label {
+  font-size: 11px;
+  color: var(--text-secondary);
+  min-width: 96px;
+  flex-shrink: 0;
+}
+.hr-zone-track {
+  flex: 1;
+  height: 10px;
+  background: var(--bg-tertiary);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.hr-zone-fill {
+  height: 100%;
+  border-radius: 6px;
+  transition: width 0.35s ease;
+}
+.hr-zone-pct {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-primary);
+  min-width: 34px;
+  text-align: right;
+}
+
+/* AI asistan onay kartı (function calling - yazma öncesi onay) */
+.ai-confirm-chip {
+  align-self: flex-start;
+  max-width: 92%;
+  background: var(--accent-blue-light);
+  border: 1px solid var(--accent-blue);
+  border-radius: 12px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ai-confirm-text {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.35;
+}
+
+.ai-confirm-actions {
+  display: flex;
+  gap: 8px;
+}

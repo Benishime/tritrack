@@ -13,7 +13,7 @@
   <link rel="manifest" href="manifest.json">
   
   <!-- CSS -->
-  <link rel="stylesheet" href="styles.css?v=1.16">
+  <link rel="stylesheet" href="styles.css?v=1.18">
 </head>
 <body class="theme-auto">
   <div class="app-container">
@@ -518,14 +518,14 @@
           <div class="ai-box" style="display:flex; flex-direction:column; gap:12px;">
             <div id="ai-chat-output" class="ai-chat-output" style="max-height: 250px; overflow-y: auto; background-color: var(--bg-secondary); border-radius:12px; padding:12px; display:flex; flex-direction:column; gap:10px; font-size:13px; border:1px solid var(--card-border);">
               <div class="ai-message message-bot" style="line-height:1.4;">
-                Merhaba! Ben senin yapay zeka antrenörünüm. Bugün yaptığın antrenmanları, vücut durumunu ve diyetini analiz etmem için **"Analiz Et"** butonuna basabilir veya bana doğrudan sorular sorabilirsin.
+                Merhaba! Ben senin yapay zeka antrenörünüm. **"Analiz Et"** ile rapor alabilir, ya da bana doğrudan yazabilirsin. Artık **senin için kayıt da yapabilirim** — örn. *"bugün 10 km koştum, 7.5 saat uyudum"* dersen onaylaman için öneri çıkarır, sen onaylayınca eklerim. *(Bulut modu için Gemini anahtarı gerekir.)*
               </div>
             </div>
 
             <button id="ai-analyze-btn" class="btn btn-primary btn-full">⚡ Verilerimi Analiz Et & Rapor Al</button>
 
             <div class="chat-input-row" style="display:flex; gap:8px;">
-              <input type="text" id="ai-chat-input" class="form-control" placeholder="Antrenörüne sor..." style="flex:1;">
+              <input type="text" id="ai-chat-input" class="form-control" placeholder="Sor ya da kaydet: 'bugün 8km koştum'..." style="flex:1;">
               <button id="ai-send-btn" class="btn btn-secondary" style="padding:0 18px; border-radius:12px;">Sor</button>
             </div>
           </div>
@@ -577,6 +577,10 @@
                 <label class="form-label" for="settings-calories">Günlük Kalori Hedefi</label>
                 <input class="form-control" type="number" id="settings-calories" value="2500">
               </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="settings-max-hr">Maksimum Nabız (Nabız Bölgeleri için)</label>
+              <input class="form-control" type="number" id="settings-max-hr" min="120" max="230" placeholder="örn. 190 (boşsa 190 varsayılır)">
             </div>
             <div class="grid-3">
               <div class="form-group">
@@ -661,6 +665,45 @@
           <div id="glance-hrv-top"></div>
           <div id="chart-hrv" class="chart-container"></div>
           <div id="glance-hrv-insight"></div>
+        </div>
+
+        <!-- Form & Yük (CTL / ATL / TSB) -->
+        <div class="card no-press">
+          <div class="card-title">📊 Form & Yük (Fitness/Yorgunluk)</div>
+          <div id="glance-loadbal-top"></div>
+          <div id="chart-load-balance" class="chart-container"></div>
+          <div class="chart-legend" id="chart-load-balance-legend"></div>
+          <div id="glance-loadbal-insight"></div>
+        </div>
+
+        <!-- Kişisel Rekorlar -->
+        <div class="card no-press">
+          <div class="card-title">🏆 Kişisel Rekorlar</div>
+          <div class="analysis-summary-grid" id="pr-grid"></div>
+        </div>
+
+        <!-- Nabız Bölgeleri (Z1–Z5) -->
+        <div class="card no-press">
+          <div class="card-title">❤️‍🔥 Nabız Bölgeleri</div>
+          <div id="glance-hrzone-top"></div>
+          <div id="chart-hr-zones"></div>
+          <div id="glance-hrzone-insight"></div>
+        </div>
+
+        <!-- Kilo Trendi (Çizgi) -->
+        <div class="card no-press">
+          <div class="card-title">⚖️ Kilo Trendi</div>
+          <div id="glance-weight-top"></div>
+          <div id="chart-weight" class="chart-container"></div>
+          <div id="glance-weight-insight"></div>
+        </div>
+
+        <!-- Kalori Trendi (Çizgi) -->
+        <div class="card no-press">
+          <div class="card-title">🔥 Kalori Trendi</div>
+          <div id="glance-calories-top"></div>
+          <div id="chart-calories" class="chart-container"></div>
+          <div id="glance-calories-insight"></div>
         </div>
       </section>
 
@@ -990,7 +1033,7 @@
   </div>
 
   <!-- Javascripts -->
-  <script src="foods.js?v=1.16"></script>
-  <script src="app.js?v=1.16"></script>
+  <script src="foods.js?v=1.18"></script>
+  <script src="app.js?v=1.18"></script>
 </body>
 </html>

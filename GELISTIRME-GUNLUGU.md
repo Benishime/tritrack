@@ -9,7 +9,43 @@ Bu dosya, uygulamada adım adım yapılan geliştirmeleri kaydeder. Sonradan dö
 > - `index.html` içindeki `?v=1.X` (css + js linkleri)
 > - `sw.js` içindeki `CACHE_NAME = 'tritrack-vX'`
 >
-> **Son sürüm:** `?v=1.16` · `tritrack-v16`
+> **Son sürüm:** `?v=1.18` · `tritrack-v18`
+
+---
+
+## ✅ AI Asistan: Eylem yapabilen agent (Gemini Function Calling)
+
+AI Koç artık "bilen"den "yapabilen"e geçti — **okuma + (onaylı) yazma** ([app.js](app.js) "9.5. AI ASİSTAN ARAÇLARI").
+
+- **6 araç:** `antrenmanEkle`, `antrenmanPlaniEkle`, `vucutDurumuKaydet`, `besinEkle`, `hedefGuncelle` (yazma) +
+  `gunVerisiniGetir` (okuma — geçmiş günleri sorgular).
+- **Agent döngüsü** `runAssistantAgent`: model → araç çağrısı → (yazma ise **onay kartı**) → çalıştır →
+  `functionResponse` geri → final metin. Maks 6 adım. `geminiGenerate` = tools + `systemInstruction` destekli istek.
+- **İnsan onayı (kullanıcı kararı):** her yazma öncesi sohbette `aiConfirmAction` ile
+  **[✅ Onayla] [✖ Vazgeç]** kartı; onaylanmadan state'e dokunulmaz. Silme/sıfırlama araçları **verilmedi**.
+- Sohbetin bulut dalı `callGeminiAPI` yerine `runAssistantAgent`'a bağlandı; karşılama mesajı + girdi ipucu güncellendi.
+- REST formatı doğrulandı (ai.google.dev): araç sonucu `role:"user"` + `functionResponse:{name,response}`,
+  modelin `functionCall` turu da contents'e eklenir.
+- Dokümantasyon: [AI-VERI-ERISIMI.md](AI-VERI-ERISIMI.md) yeni yazma yeteneğine göre güncellendi.
+
+---
+
+## ✅ Analiz Paketi — 5 yeni içgörü (saf SVG, sıfır bağımlılık)
+
+Mevcut Analiz altyapısı (`buildLineChartSVG`, `collectDailySeries`, glance deseni, `SPORT_META`) yeniden
+kullanılarak toplanan veriden 5 yeni analiz türetildi ([app.js](app.js) Bölüm 12, [index.html](index.html) Analiz görünümü):
+
+- **⚖️ Kilo Trendi** — `renderWeightChart` (`collectDailySeries('weight',30)`).
+- **🔥 Kalori Trendi** — `renderCalorieChart` + `collectCalorieSeries` (günlük `state.diet` toplamı), hedefe göre yorum.
+- **🏆 Kişisel Rekorlar** — `computePersonalRecords`/`renderPersonalRecords`: en uzun koşu/sürüş, en iyi tempo,
+  en hızlı sürüş, en uzun süre, en yüksek haftalık mesafe (`.analysis-stat-card` ızgarası).
+- **📊 Form & Yük (CTL/ATL/TSB)** — `dailyLoadOn` (RPE×dk TRIMP) + `computeFitnessFatigue` (EWMA: CTL 42g, ATL 7g,
+  Form=CTL−ATL); `renderLoadBalanceChart` iki-çizgi grafik + Form yorumu (taze/dengede/yorgun).
+- **❤️‍🔥 Nabız Bölgeleri** — `hrZoneOf`/`renderHrZones`: son 28 günde nabızlı antrenmanları süreye göre Z1–Z5
+  dağıtır (yatay barlar). Yeni profil alanı **`maxHr`** (Ayarlar → "Maksimum Nabız", boşsa 190).
+
+> Fazlar bağımsız geliştirildi; her biri veri yokken düzgün boş durum gösterir. `profile.maxHr` opsiyonel
+> olduğundan migrasyon gerekmedi (yedekleme/geri yüklemede de korunur).
 
 ---
 
