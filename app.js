@@ -560,6 +560,7 @@ function initProgramView() {
     renderTodayView();
   });
 
+  initBulkPlanModal();
   renderProgramView();
 }
 
@@ -567,6 +568,210 @@ function openPlanModal(defaultDate) {
   const modal = document.getElementById('modal-plan');
   document.getElementById('plan-date').value = defaultDate;
   modal.classList.add('open');
+}
+
+// ---- TOPLU HAFTALIK PLAN İÇE AKTARMA ----
+
+// Gün adı → hafta içi index (0=Pazartesi). Uzun anahtarlar önce eşleşir.
+const BULK_DAY_MAP = {
+  pazartesi: 0, pzt: 0, pt: 0, monday: 0, mon: 0,
+  salı: 1, sali: 1, sal: 1, tuesday: 1, tue: 1,
+  çarşamba: 2, carsamba: 2, çar: 2, car: 2, wednesday: 2, wed: 2,
+  perşembe: 3, persembe: 3, perş: 3, pers: 3, per: 3, thursday: 3, thu: 3,
+  cumartesi: 5, cmt: 5, cts: 5, saturday: 5, sat: 5,
+  cuma: 4, cum: 4, friday: 4, fri: 4,
+  pazar: 6, paz: 6, pz: 6, sunday: 6, sun: 6
+};
+const BULK_DAY_KEYS = Object.keys(BULK_DAY_MAP).sort((a, b) => b.length - a.length);
+const BULK_DAY_NAMES = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar'];
+
+const BULK_EXAMPLE = `Pazartesi: Koşu 10km tempo
+Salı: Yüzme 1500m teknik
+Çarşamba: Dinlenme
+Perşembe: Bisiklet 40km Z2
+Cuma: Güç 45dk core
+Cumartesi: Uzun koşu 18km
+Pazar: Dinlenme`;
+
+let bulkWeekMonday = mondayOf(currentDateStr);
+
+function initBulkPlanModal() {
+  const openBtn = document.getElementById('bulk-plan-open-btn');
+  const modal = document.getElementById('modal-bulk-plan');
+  if (!openBtn || !modal) return;
+
+  openBtn.addEventListener('click', () => {
+    bulkWeekMonday = mondayOf(currentDateStr);
+    document.getElementById('bulk-plan-input').value = '';
+    document.getElementById('bulk-plan-replace').checked = false;
+    updateBulkWeekLabel();
+    renderBulkPreview();
+    modal.classList.add('open');
+  });
+
+  document.getElementById('close-modal-bulk').addEventListener('click', () => modal.classList.remove('open'));
+  modal.addEventListener('click', (e) => { if (e.target === modal) modal.classList.remove('open'); });
+
+  document.getElementById('bulk-week-prev').addEventListener('click', () => { bulkWeekMonday = addDaysStr(bulkWeekMonday, -7); updateBulkWeekLabel(); renderBulkPreview(); });
+  document.getElementById('bulk-week-next').addEventListener('click', () => { bulkWeekMonday = addDaysStr(bulkWeekMonday, 7); updateBulkWeekLabel(); renderBulkPreview(); });
+
+  document.getElementById('bulk-plan-input').addEventListener('input', renderBulkPreview);
+  document.getElementById('bulk-plan-example').addEventListener('click', () => {
+    document.getElementById('bulk-plan-input').value = BULK_EXAMPLE;
+    renderBulkPreview();
+  });
+
+  document.getElementById('bulk-plan-submit').addEventListener('click', submitBulkPlan);
+}
+
+function updateBulkWeekLabel() {
+  const start = new Date(bulkWeekMonday);
+  const end = new Date(addDaysStr(bulkWeekMonday, 6));
+  const opt = { day: 'numeric', month: 'short' };
+  document.getElementById('bulk-week-label').innerText =
+    `${start.toLocaleDateString('tr-TR', opt)} – ${end.toLocaleDateString('tr-TR', opt)}`;
+}
+
+// Tek satırı çöz: gün + branş + mesafe/süre/not
+function parseBulkLine(rawLine) {
+  const line = rawLine.trim();
+  if (!line) return null; // boş satır atla
+
+  const lower = line.toLocaleLowerCase('tr');
+  // Gün adı tam kelime olmalı: sonrasındaki karakter harf OLMAMALI ("Salata" → "Salı" sanılmasın)
+  const dayKey = BULK_DAY_KEYS.find(k => {
+    if (!lower.startsWith(k)) return false;
+    const next = lower.charAt(k.length);
+    return next === '' || /[^a-zçğıiöşü]/i.test(next);
+  });
+  if (dayKey === undefined) {
+    return { error: true, raw: line };
+  }
+
+  let content = line.slice(dayKey.length).replace(/^[\s:.\-–—)]+/, '').trim();
+  const dayIndex = BULK_DAY_MAP[dayKey];
+  const date = addDaysStr(bulkWeekMonday, dayIndex);
+
+  // Dinlenme günü
+  if (/dinlen|rest|off\b|izin|tatil|yok/i.test(content) || content === '') {
+    return { rest: true, dayIndex, date, raw: line };
+  }
+
+  const sport = detectBulkSport(content);
+
+  // Mesafe (km veya m)
+  let targetDistance = null;
+  const dm = content.match(/(\d+(?:[.,]\d+)?)\s*(km|m)\b/i);
+  if (dm) {
+    const val = parseFloat(dm[1].replace(',', '.'));
+    const unit = dm[2].toLowerCase();
+    if (unit === 'km') targetDistance = val;
+    else targetDistance = (sport === 'swim') ? val : Math.round((val / 1000) * 100) / 100; // m→km (yüzme hariç)
+  }
+
+  // Süre (sa + dk)
+  let targetDuration = null;
+  const hMatch = content.match(/(\d+)\s*(?:saat|sa|hour|hr|h)/i);
+  const mMatch = content.match(/(\d+)\s*(?:dk|dak|dakika|min|mins|minute)\b/i);
+  if (hMatch || mMatch) {
+    targetDuration = (hMatch ? parseInt(hMatch[1]) * 60 : 0) + (mMatch ? parseInt(mMatch[1]) : 0);
+  }
+
+  return { dayIndex, date, sport, targetDistance, targetDuration, details: content, raw: line };
+}
+
+// Metinden branş tahmini (bulunamazsa 'run' varsayar, ama eşleşmeyi de bildirir)
+function detectBulkSport(text) {
+  const t = (text || '').toLocaleLowerCase('tr');
+  if (/(yüz|yuz|swim|havuz|kulaç|kulac)/.test(t)) return 'swim';
+  if (/(bisiklet|bike|cycl|ride|pedal|watt|spin)/.test(t)) return 'bike';
+  if (/(güç|guc|fitness|gym|core|kuvvet|ağırlık|agirlik|strength)/.test(t)) return 'fitness';
+  if (/(koş|kos|run|jog|tempo|interval|fartlek|trail|yürü|yuru|walk)/.test(t)) return 'run';
+  return 'run'; // varsayılan
+}
+
+function parseBulkText(text) {
+  return text.split('\n').map(parseBulkLine).filter(Boolean);
+}
+
+function renderBulkPreview() {
+  const container = document.getElementById('bulk-plan-preview');
+  const text = document.getElementById('bulk-plan-input').value;
+  const parsed = parseBulkText(text);
+
+  if (parsed.length === 0) {
+    container.innerHTML = '<p class="text-xs text-muted" style="text-align:center; padding:8px;">Yukarıya planını yapıştır; burada önizleme çıkacak.</p>';
+    return;
+  }
+
+  const workouts = parsed.filter(p => p.sport);
+  const rests = parsed.filter(p => p.rest);
+  const errors = parsed.filter(p => p.error);
+
+  let html = `<div class="bulk-preview-summary">✓ ${workouts.length} antrenman · 😴 ${rests.length} dinlenme${errors.length ? ` · ⚠️ ${errors.length} anlaşılamadı` : ''}</div>`;
+
+  parsed.forEach(p => {
+    if (p.error) {
+      html += `<div class="bulk-row bulk-error"><span class="bulk-day">⚠️ ?</span><span class="bulk-detail">"${escapeHtml(p.raw)}" — gün adı bulunamadı</span></div>`;
+      return;
+    }
+    const dayName = BULK_DAY_NAMES[p.dayIndex];
+    if (p.rest) {
+      html += `<div class="bulk-row bulk-rest"><span class="bulk-day">${dayName}</span><span class="bulk-detail">😴 Dinlenme</span></div>`;
+      return;
+    }
+    const meta = SPORT_META[p.sport];
+    const bits = [];
+    if (p.targetDistance) bits.push(p.sport === 'swim' ? `${p.targetDistance}m` : `${p.targetDistance}km`);
+    if (p.targetDuration) bits.push(`${p.targetDuration}dk`);
+    const extra = bits.length ? ` · ${bits.join(' · ')}` : '';
+    html += `<div class="bulk-row">
+      <span class="bulk-day">${dayName}</span>
+      <span class="bulk-sport-chip" style="background:${meta.color}">${meta.name}</span>
+      <span class="bulk-detail">${escapeHtml(p.details)}${extra}</span>
+    </div>`;
+  });
+
+  container.innerHTML = html;
+}
+
+function submitBulkPlan() {
+  const text = document.getElementById('bulk-plan-input').value;
+  const parsed = parseBulkText(text);
+  const workouts = parsed.filter(p => p.sport);
+
+  if (workouts.length === 0) {
+    alert('Eklenecek antrenman bulunamadı. Format: "Pazartesi: Koşu 10km".');
+    return;
+  }
+
+  // Bu haftanın mevcut planlarını değiştir seçeneği
+  if (document.getElementById('bulk-plan-replace').checked) {
+    const weekEnd = addDaysStr(bulkWeekMonday, 6);
+    state.plans = state.plans.filter(p => !(p.date >= bulkWeekMonday && p.date <= weekEnd));
+  }
+
+  workouts.forEach((p, i) => {
+    state.plans.push({
+      id: 'p_' + Date.now() + '_' + i,
+      date: p.date,
+      sport: p.sport,
+      targetDistance: p.targetDistance,
+      targetDuration: p.targetDuration,
+      details: p.details,
+      completed: false
+    });
+  });
+
+  saveState();
+  document.getElementById('modal-bulk-plan').classList.remove('open');
+  renderProgramView();
+  renderTodayView();
+  showToast(`${workouts.length} antrenman programa eklendi! 📋`);
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 }
 
 function renderProgramView() {

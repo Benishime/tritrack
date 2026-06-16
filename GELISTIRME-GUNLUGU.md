@@ -9,7 +9,25 @@ Bu dosya, uygulamada adım adım yapılan geliştirmeleri kaydeder. Sonradan dö
 > - `index.html` içindeki `?v=1.X` (css + js linkleri)
 > - `sw.js` içindeki `CACHE_NAME = 'tritrack-vX'`
 >
-> **Son sürüm:** `?v=1.11` · `tritrack-v11`
+> **Son sürüm:** `?v=1.12` · `tritrack-v12`
+> ⚠️ Paralel dal `ozellik/haftalik-diyet` da bağımsız olarak `1.12` kullandı — birleştirmede
+> sürüm satırı çakışırsa daha yükseğe (örn. `1.13`) çıkar.
+
+---
+
+## ✅ Haftalık Plan Toplu İçe Aktarma (dal: `ozellik/haftalik-plan-ice-aktar`)
+
+Antrenörden gelen haftalık programı **tek seferde** ekleme. Program sekmesinde
+**"📋 Haftayı İçe Aktar"** → modalda metin yapıştır → canlı önizleme → onayla.
+
+- **Akıllı ayrıştırma** ([app.js](app.js) bölüm 5): her satır `Gün: Branş mesafe/süre detay`.
+  `parseBulkLine` → gün adını (tam kelime; "Salata" ≠ "Salı"), branşı (`detectBulkSport`, TR/EN),
+  mesafeyi (km/m; yüzme m, diğerleri m→km), süreyi (`1sa30dk`, `60dk`, `2 saat`) çıkarır.
+  "Dinlenme/off/izin" → plan eklenmez.
+- **Hafta seçici** (◀ ▶) + **canlı önizleme**: "X antrenman · Y dinlenme · Z anlaşılamadı";
+  çözülemeyen satır kırmızı işaretlenir. **"Örnek doldur"** butonu formatı gösterir.
+- **"Bu haftanın planlarını değiştir"** seçeneği (varsa o haftanın planlarını siler, sonra ekler).
+- Yeniden kullanım: `mondayOf`/`addDaysStr` (tarih), `SPORT_META` (çip rengi/ad), mevcut `.modal-overlay`.
 
 ---
 

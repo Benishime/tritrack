@@ -13,7 +13,7 @@
   <link rel="manifest" href="manifest.json">
   
   <!-- CSS -->
-  <link rel="stylesheet" href="styles.css?v=1.11">
+  <link rel="stylesheet" href="styles.css?v=1.12">
 </head>
 <body class="theme-auto">
   <div class="app-container">
@@ -158,7 +158,9 @@
           <h2 class="text-xl font-bold">Haftalık Program</h2>
           <button id="add-planned-workout-btn" class="btn btn-primary" style="padding: 8px 14px; font-size:13px;">+ Antrenman Planla</button>
         </div>
-        
+
+        <button id="bulk-plan-open-btn" class="btn btn-secondary btn-full" style="margin-bottom:14px;">📋 Haftayı İçe Aktar (Toplu Plan)</button>
+
         <div class="weekly-scheduler-container">
           <div class="weekly-days-list">
             <!-- Gün kartları dinamik yüklenecek -->
@@ -803,6 +805,43 @@
     </div>
   </div>
 
+  <!-- MODAL: TOPLU HAFTALIK PLAN İÇE AKTAR -->
+  <div id="modal-bulk-plan" class="modal-overlay">
+    <div class="modal-sheet">
+      <div class="modal-handle-bar"></div>
+      <div class="modal-header">
+        <h3 class="modal-title">📋 Haftayı İçe Aktar</h3>
+        <button id="close-modal-bulk" class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <!-- Hafta seçici -->
+        <div class="bulk-week-nav">
+          <button id="bulk-week-prev" class="date-nav-btn" type="button">&larr;</button>
+          <span id="bulk-week-label">—</span>
+          <button id="bulk-week-next" class="date-nav-btn" type="button">&rarr;</button>
+        </div>
+
+        <p class="text-xs text-muted" style="margin:10px 0 6px;">
+          Her satıra bir gün yaz: <strong>Gün: Branş mesafe/süre detay</strong>. Antrenörünün metnini direkt yapıştırabilirsin.
+        </p>
+
+        <textarea id="bulk-plan-input" class="form-control" rows="8" style="font-family:inherit; line-height:1.6;" placeholder="Pazartesi: Koşu 10km tempo&#10;Salı: Yüzme 1500m teknik&#10;Çarşamba: Dinlenme&#10;Perşembe: Bisiklet 40km Z2&#10;Cuma: Güç 45dk core&#10;Cumartesi: Uzun koşu 18km&#10;Pazar: Dinlenme"></textarea>
+
+        <div style="display:flex; gap:8px; margin-top:8px;">
+          <button id="bulk-plan-example" type="button" class="btn btn-ghost" style="flex:1; padding:8px; font-size:12px;">Örnek doldur</button>
+          <label class="bulk-replace-label">
+            <input type="checkbox" id="bulk-plan-replace"> Bu haftanın planlarını değiştir
+          </label>
+        </div>
+
+        <!-- Canlı önizleme -->
+        <div id="bulk-plan-preview" class="bulk-preview"></div>
+
+        <button id="bulk-plan-submit" class="btn btn-primary btn-full mt-2">Planı Ekle</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ONBOARDING SİHİRBAZI (İlk açılışta) -->
   <div id="onboarding-overlay" class="onboarding-overlay">
     <div class="onboarding-card">
@@ -898,7 +937,7 @@
   </div>
 
   <!-- Javascripts -->
-  <script src="foods.js?v=1.11"></script>
-  <script src="app.js?v=1.11"></script>
+  <script src="foods.js?v=1.12"></script>
+  <script src="app.js?v=1.12"></script>
 </body>
 </html>
