@@ -1,0 +1,22 @@
+# İşletim sistemi
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store
+
+# Editör
+.vscode/
+.idea/
+*.swp
+*~
+
+# Loglar / geçici
+*.log
+node_modules/
+
+# Test/yerel dosyalar (yayına girmesin)
+ornek-antrenman.gpx
+
+# Kişisel Strava veri arşivi (logins, contacts, profil vb. hassas) — sürüm kontrolüne girmemeli
+Starava veri/
+*-yedek-*.json

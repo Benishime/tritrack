@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>TriTrack - Triatlon ve Koşu Takip</title>
+  
+  <!-- PWA Meta Etiketleri -->
+  <meta name="theme-color" content="#2563eb">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="manifest" href="manifest.json">
+  
+  <!-- CSS -->
+  <link rel="stylesheet" href="styles.css?v=1.8">
+</head>
+<body class="theme-auto">
+  <div class="app-container">
+    
+    <!-- Üst Başlık / Header -->
+    <header class="app-header">
+      <div class="app-title">
+        <svg class="logo-svg" viewBox="0 0 24 24" width="26" height="26">
+          <path fill="currentColor" d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12C20,13.62 19.5,15.14 18.69,16.4L16.4,14.11C16.79,13.47 17,12.76 17,12A5,5 0 0,0 12,7C11.24,7 10.53,7.21 9.89,7.6L7.6,5.31C8.86,4.5 10.38,4 12,4M5.31,7.6L7.6,9.89C7.21,10.53 7,11.24 7,12A5,5 0 0,0 12,17C12.76,17 13.47,16.79 14.11,16.4L16.4,18.69C15.14,19.5 13.62,20 12,20A8,8 0 0,1 4,12C4,10.38 4.5,8.86 5.31,7.6M12,9A3,3 0 0,1 15,12A3,3 0 0,1 12,15A3,3 0 0,1 9,12A3,3 0 0,1 12,9Z"/>
+        </svg>
+        <span>Tri<span>Track</span></span>
+      </div>
+      <div class="header-actions">
+        <button id="theme-toggle" class="btn-icon" aria-label="Temayı değiştir">
+          <svg viewBox="0 0 24 24" width="20" height="20">
+            <path fill="currentColor" d="M12,18C11.11,18 10.26,17.8 9.5,17.45C11.56,16.5 13,14.42 13,12C13,9.58 11.56,7.5 9.5,6.55C10.26,6.2 11.11,6 12,6A6,6 0 0,1 18,12A6,6 0 0,1 12,18M20,8.69V4H15.31L12,0.69L8.69,4H4V8.69L0.69,12L4,15.31V20H8.69L12,23.31L15.31,20H20V15.31L23.31,12L20,8.69Z" />
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Ana İçerik Alanı -->
+    <main class="app-content">
+
+      <!-- GÖRÜNÜM 1: BUGÜN (DASHBOARD) -->
+      <section id="view-today" class="view-section active">
+        <div class="date-navigator">
+          <button id="prev-day" class="date-nav-btn">&larr;</button>
+          <h2 id="current-date-title">Yükleniyor...</h2>
+          <button id="next-day" class="date-nav-btn">&rarr;</button>
+        </div>
+
+        <!-- Bütünsel Parametreler (Uyku, HRV, Kilo) -->
+        <div class="card holistic-card no-press">
+          <div class="card-title">🩺 Günlük Vücut Durumu</div>
+          <div class="grid-2 mt-3">
+            <div class="form-group">
+              <label class="form-label" for="input-sleep">Uyku (saat)</label>
+              <input class="form-control" type="number" id="input-sleep" min="0" max="24" step="0.5" placeholder="7.5">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="input-sleep-score">Uyku Puanı (0–100)</label>
+              <input class="form-control" type="number" id="input-sleep-score" min="0" max="100" step="1" placeholder="85">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="input-hrv">HRV (ms)</label>
+              <input class="form-control" type="number" id="input-hrv" min="0" max="250" placeholder="65">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="input-weight">Kilo (kg)</label>
+              <input class="form-control" type="number" id="input-weight" min="30" max="200" step="0.1" placeholder="75.0">
+            </div>
+          </div>
+          <button id="save-holistic-btn" class="btn btn-secondary btn-full mt-1">Vücut Durumunu Kaydet</button>
+        </div>
+
+        <!-- Bugünün Antrenman Programı (Yapılacaklar) -->
+        <div class="card plan-checklist-card no-press">
+          <div class="card-header">
+            <div class="card-title">📅 Bugünün Antrenman Planı</div>
+            <button id="quick-add-plan-btn" class="btn btn-secondary btn-icon" style="width:auto; padding: 4px 10px; height: 32px; font-size:12px;">+ Planla</button>
+          </div>
+          <div id="today-plans-list" class="checklist-container">
+            <!-- Dinamik doldurulacak -->
+            <p class="empty-state-text">Bugün için planlanmış bir antrenman yok.</p>
+          </div>
+        </div>
+
+        <!-- Bugünün Diyet Planı (Diyet Planlama Checklist) -->
+        <div class="card plan-diet-checklist-card no-press">
+          <div class="card-header">
+            <div class="card-title">🍉 Bugünün Diyet Planı (Öğünler)</div>
+          </div>
+          <div id="today-diet-plans-list" class="checklist-container">
+            <!-- Dinamik doldurulacak -->
+            <p class="empty-state-text">Bugün için planlanmış bir diyet bulunmuyor.</p>
+          </div>
+        </div>
+
+        <!-- Bugün Gerçekleşen Antrenmanlar -->
+        <div class="card completed-workouts-card no-press">
+          <div class="card-header">
+            <div class="card-title">✅ Yapılan Antrenmanlar</div>
+            <button id="go-to-log-btn" class="btn btn-primary" style="padding: 6px 12px; border-radius: 8px; font-size:12px;">Antrenman Kaydet</button>
+          </div>
+          <div id="today-workouts-list" class="workouts-log-container">
+            <!-- Dinamik doldurulacak -->
+            <p class="empty-state-text">Henüz antrenman kaydedilmedi.</p>
+          </div>
+        </div>
+
+        <!-- Bugünün Diyet Özeti (Halkalar) -->
+        <div class="card daily-diet-summary-card no-press">
+          <div class="card-title">📊 Diyet ve Kalori Özeti</div>
+          <div class="diet-summary-layout mt-3" style="display: flex; gap: 20px; align-items: center;">
+            <div class="calories-ring-container" style="flex-shrink: 0;">
+              <div class="progress-ring-wrapper" style="position: relative; width: 120px; height: 120px;">
+                <svg class="progress-ring" width="120" height="120">
+                  <circle class="progress-ring-bg" stroke="var(--bg-ter)" stroke-width="8" fill="transparent" r="50" cx="60" cy="60"/>
+                  <circle id="diet-calories-ring" class="progress-ring-bar" stroke="var(--accent-blue)" stroke-width="8" fill="transparent" r="50" cx="60" cy="60" style="transition: stroke-dashoffset 0.35s; transform: rotate(-90deg); transform-origin: 50% 50%;"/>
+                </svg>
+                <div class="calories-text-center" style="position: absolute; top:0; left:0; width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+                  <span id="diet-calories-consumed" class="font-bold text-lg">0</span>
+                  <span style="width: 40px; height:1px; background-color: var(--card-border); margin: 2px 0;"></span>
+                  <span id="diet-calories-target" class="text-xs text-secondary">2500</span>
+                  <span class="text-xs text-muted" style="font-size: 9px;">kcal</span>
+                </div>
+              </div>
+            </div>
+            
+            <div class="macros-bars-container" style="flex: 1; display:flex; flex-direction:column; gap:10px;">
+              <div class="macro-bar-group">
+                <div class="progress-label-row">
+                  <span>🍖 Protein</span>
+                  <span><span id="diet-p-consumed">0</span> / <span id="diet-p-target">150</span> g</span>
+                </div>
+                <div class="progress-track"><div id="diet-p-bar" class="progress-fill" style="width: 0%; background-color: var(--color-fitness);"></div></div>
+              </div>
+              <div class="macro-bar-group">
+                <div class="progress-label-row">
+                  <span>🌾 Karbonhidrat</span>
+                  <span><span id="diet-c-consumed">0</span> / <span id="diet-c-target">300</span> g</span>
+                </div>
+                <div class="progress-track"><div id="diet-c-bar" class="progress-fill" style="width: 0%; background-color: var(--color-bisiklet);"></div></div>
+              </div>
+              <div class="macro-bar-group">
+                <div class="progress-label-row">
+                  <span>🥑 Yağ</span>
+                  <span><span id="diet-f-consumed">0</span> / <span id="diet-f-target">70</span> g</span>
+                </div>
+                <div class="progress-track"><div id="diet-f-bar" class="progress-fill" style="width: 0%; background-color: var(--color-kosu);"></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+
+      <!-- GÖRÜNÜM 2: PROGRAM (SCHEDULER) -->
+      <section id="view-program" class="view-section">
+        <div class="card-header">
+          <h2 class="text-xl font-bold">Haftalık Program</h2>
+          <button id="add-planned-workout-btn" class="btn btn-primary" style="padding: 8px 14px; font-size:13px;">+ Antrenman Planla</button>
+        </div>
+        
+        <div class="weekly-scheduler-container">
+          <div class="weekly-days-list">
+            <!-- Gün kartları dinamik yüklenecek -->
+            <div class="day-schedule-card card no-press" data-day="0" style="padding:14px; margin-bottom:12px;">
+              <div class="day-header font-semibold text-base" style="display:flex; justify-content:space-between; margin-bottom:8px;">Pazartesi <span class="badge badge-blue">0 Plan</span></div>
+              <div class="day-plans" id="day-plans-0"></div>
+            </div>
+            <div class="day-schedule-card card no-press" data-day="1" style="padding:14px; margin-bottom:12px;">
+              <div class="day-header font-semibold text-base" style="display:flex; justify-content:space-between; margin-bottom:8px;">Salı <span class="badge badge-blue">0 Plan</span></div>
+              <div class="day-plans" id="day-plans-1"></div>
+            </div>
+            <div class="day-schedule-card card no-press" data-day="2" style="padding:14px; margin-bottom:12px;">
+              <div class="day-header font-semibold text-base" style="display:flex; justify-content:space-between; margin-bottom:8px;">Çarşamba <span class="badge badge-blue">0 Plan</span></div>
+              <div class="day-plans" id="day-plans-2"></div>
+            </div>
+            <div class="day-schedule-card card no-press" data-day="3" style="padding:14px; margin-bottom:12px;">
+              <div class="day-header font-semibold text-base" style="display:flex; justify-content:space-between; margin-bottom:8px;">Perşembe <span class="badge badge-blue">0 Plan</span></div>
+              <div class="day-plans" id="day-plans-3"></div>
+            </div>
+            <div class="day-schedule-card card no-press" data-day="4" style="padding:14px; margin-bottom:12px;">
+              <div class="day-header font-semibold text-base" style="display:flex; justify-content:space-between; margin-bottom:8px;">Cuma <span class="badge badge-blue">0 Plan</span></div>
+              <div class="day-plans" id="day-plans-4"></div>
+            </div>
+            <div class="day-schedule-card card no-press" data-day="5" style="padding:14px; margin-bottom:12px;">
+              <div class="day-header font-semibold text-base" style="display:flex; justify-content:space-between; margin-bottom:8px;">Cumartesi <span class="badge badge-blue">0 Plan</span></div>
+              <div class="day-plans" id="day-plans-5"></div>
+            </div>
+            <div class="day-schedule-card card no-press" data-day="6" style="padding:14px; margin-bottom:12px;">
+              <div class="day-header font-semibold text-base" style="display:flex; justify-content:space-between; margin-bottom:8px;">Pazar <span class="badge badge-blue">0 Plan</span></div>
+              <div class="day-plans" id="day-plans-6"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+
+      <!-- GÖRÜNÜM 3: DİYET TAKİBİ (DIET TRACKER) -->
+      <section id="view-diet" class="view-section">
+        <div class="card-header">
+          <h2 class="text-xl font-bold">Günlük Diyet Takibi</h2>
+        </div>
+
+        <div class="card diet-details-summary no-press">
+          <div class="grid-3">
+            <div>
+              <span class="text-xs text-muted">Alınan Kalori</span>
+              <h3 id="diet-pg-consumed" class="font-bold text-lg mt-1">0 kcal</h3>
+            </div>
+            <div>
+              <span class="text-xs text-muted">Hedef Kalori</span>
+              <h3 id="diet-pg-target" class="font-bold text-lg mt-1">2500 kcal</h3>
+            </div>
+            <div>
+              <span class="text-xs text-muted">Kalan</span>
+              <h3 id="diet-pg-remaining" class="font-bold text-lg mt-1">2500 kcal</h3>
+            </div>
+          </div>
+        </div>
+
+        <!-- Öğün Listeleri -->
+        <div class="meals-container">
+          <!-- Kahvaltı -->
+          <div class="meal-section card no-press" data-meal="breakfast">
+            <div class="meal-header">
+              <div class="flex-align">
+                <span class="text-lg">🍳</span>
+                <h4 class="font-semibold text-base">Kahvaltı</h4>
+              </div>
+              <button class="btn btn-secondary add-food-to-meal-btn" style="padding: 6px 12px; border-radius: 8px; font-size:12px;">+ Ekle</button>
+            </div>
+            <div class="meal-foods-list mt-2" id="meal-foods-breakfast"></div>
+          </div>
+          
+          <!-- Öğle Yemeği -->
+          <div class="meal-section card no-press" data-meal="lunch">
+            <div class="meal-header">
+              <div class="flex-align">
+                <span class="text-lg">🍗</span>
+                <h4 class="font-semibold text-base">Öğle Yemeği</h4>
+              </div>
+              <button class="btn btn-secondary add-food-to-meal-btn" style="padding: 6px 12px; border-radius: 8px; font-size:12px;">+ Ekle</button>
+            </div>
+            <div class="meal-foods-list mt-2" id="meal-foods-lunch"></div>
+          </div>
+
+          <!-- Akşam Yemeği -->
+          <div class="meal-section card no-press" data-meal="dinner">
+            <div class="meal-header">
+              <div class="flex-align">
+                <span class="text-lg">🥗</span>
+                <h4 class="font-semibold text-base">Akşam Yemeği</h4>
+              </div>
+              <button class="btn btn-secondary add-food-to-meal-btn" style="padding: 6px 12px; border-radius: 8px; font-size:12px;">+ Ekle</button>
+            </div>
+            <div class="meal-foods-list mt-2" id="meal-foods-dinner"></div>
+          </div>
+
+          <!-- Atıştırmalık -->
+          <div class="meal-section card no-press" data-meal="snack">
+            <div class="meal-header">
+              <div class="flex-align">
+                <span class="text-lg">🍌</span>
+                <h4 class="font-semibold text-base">Atıştırmalıklar</h4>
+              </div>
+              <button class="btn btn-secondary add-food-to-meal-btn" style="padding: 6px 12px; border-radius: 8px; font-size:12px;">+ Ekle</button>
+            </div>
+            <div class="meal-foods-list mt-2" id="meal-foods-snack"></div>
+          </div>
+        </div>
+      </section>
+
+
+      <!-- GÖRÜNÜM 4: ANTRENMAN KAYDET (WORKOUT LOGGER) -->
+      <section id="view-log" class="view-section">
+        <div class="card-header">
+          <h2 class="text-xl font-bold">Antrenman Kaydı</h2>
+        </div>
+
+        <!-- Spor Seçim Sekmeleri -->
+        <div class="sports-tabs grid-4 mb-3">
+          <button class="sport-tab-btn btn btn-ghost active" data-sport="run">🏃 Koşu</button>
+          <button class="sport-tab-btn btn btn-ghost" data-sport="bike">🚴 Bisiklet</button>
+          <button class="sport-tab-btn btn btn-ghost" data-sport="swim">🏊 Yüzme</button>
+          <button class="sport-tab-btn btn btn-ghost" data-sport="fitness">🏋️ Güç</button>
+        </div>
+
+        <div class="card form-card no-press">
+          
+          <!-- 1. KOŞU FORMU -->
+          <form id="form-log-run" class="sport-log-form active">
+            <div class="form-group">
+              <label class="form-label" for="run-distance">Mesafe (km)</label>
+              <input class="form-control" type="number" id="run-distance" step="0.01" min="0" placeholder="10.00" required>
+            </div>
+            <div class="grid-3">
+              <div class="form-group">
+                <label class="form-label" for="run-duration-h">Saat</label>
+                <input class="form-control" type="number" id="run-duration-h" min="0" max="23" value="0" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="run-duration-m">Dakika</label>
+                <input class="form-control" type="number" id="run-duration-m" min="0" max="59" value="50" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="run-duration-s">Saniye</label>
+                <input class="form-control" type="number" id="run-duration-s" min="0" max="59" value="0" required>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="run-hr">Ortalama Kalp Hızı (Nabız)</label>
+              <input class="form-control" type="number" id="run-hr" min="30" max="240" placeholder="145">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="run-rpe">Zorluk Seviyesi (RPE: <span id="run-rpe-val" class="font-bold text-blue">6</span>/10)</label>
+              <input type="range" id="run-rpe" min="1" max="10" value="6" step="1" style="width:100%; margin-top:8px;">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="run-notes">Notlar / Ayakkabı</label>
+              <textarea class="form-control" id="run-notes" placeholder="Hafif rüzgarlı, tempo koşusu. Pegasus 40." rows="3"></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary btn-full mt-2">Koşu Antrenmanını Kaydet</button>
+          </form>
+
+          <!-- 2. BİSİKLET FORMU -->
+          <form id="form-log-bike" class="sport-log-form">
+            <div class="form-group">
+              <label class="form-label" for="bike-distance">Mesafe (km)</label>
+              <input class="form-control" type="number" id="bike-distance" step="0.01" min="0" placeholder="40.00" required>
+            </div>
+            <div class="grid-3">
+              <div class="form-group">
+                <label class="form-label" for="bike-duration-h">Saat</label>
+                <input class="form-control" type="number" id="bike-duration-h" min="0" max="23" value="1" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="bike-duration-m">Dakika</label>
+                <input class="form-control" type="number" id="bike-duration-m" min="0" max="59" value="30" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="bike-duration-s">Saniye</label>
+                <input class="form-control" type="number" id="bike-duration-s" min="0" max="59" value="0" required>
+              </div>
+            </div>
+            <div class="grid-2">
+              <div class="form-group">
+                <label class="form-label" for="bike-power">Ortalama Güç (Watt)</label>
+                <input class="form-control" type="number" id="bike-power" min="0" placeholder="180">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="bike-cadence">Ortalama Kadans (rpm)</label>
+                <input class="form-control" type="number" id="bike-cadence" min="0" placeholder="85">
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="bike-rpe">Zorluk Seviyesi (RPE: <span id="bike-rpe-val" class="font-bold text-blue">5</span>/10)</label>
+              <input type="range" id="bike-rpe" min="1" max="10" value="5" step="1" style="width:100%; margin-top:8px;">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="bike-notes">Notlar (Rota, Rüzgar vb.)</label>
+              <textarea class="form-control" id="bike-notes" placeholder="Sahil yolu sürüşü." rows="3"></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary btn-full mt-2">Bisiklet Antrenmanını Kaydet</button>
+          </form>
+
+          <!-- 3. YÜZME FORMU -->
+          <form id="form-log-swim" class="sport-log-form">
+            <div class="grid-2">
+              <div class="form-group">
+                <label class="form-label" for="swim-pool">Havuz Uzunluğu</label>
+                <select class="form-control form-select" id="swim-pool">
+                  <option value="25">25 Metre Havuz</option>
+                  <option value="50">50 Metre Havuz</option>
+                  <option value="open">Açık Su / Deniz</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="swim-distance">Mesafe (Metre)</label>
+                <input class="form-control" type="number" id="swim-distance" min="0" step="25" placeholder="1500" required>
+              </div>
+            </div>
+            <div class="grid-3">
+              <div class="form-group">
+                <label class="form-label" for="swim-duration-h">Saat</label>
+                <input class="form-control" type="number" id="swim-duration-h" min="0" max="23" value="0" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="swim-duration-m">Dakika</label>
+                <input class="form-control" type="number" id="swim-duration-m" min="0" max="59" value="45" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="swim-duration-s">Saniye</label>
+                <input class="form-control" type="number" id="swim-duration-s" min="0" max="59" value="0" required>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="swim-rpe">Zorluk Seviyesi (RPE: <span id="swim-rpe-val" class="font-bold text-blue">7</span>/10)</label>
+              <input type="range" id="swim-rpe" min="1" max="10" value="7" step="1" style="width:100%; margin-top:8px;">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="swim-notes">Notlar (Stil, Driller vb.)</label>
+              <textarea class="form-control" id="swim-notes" placeholder="500m ısınma, 5x100m teknik drill." rows="3"></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary btn-full mt-2">Yüzme Antrenmanını Kaydet</button>
+          </form>
+
+          <!-- 4. FITNESS FORMU -->
+          <form id="form-log-fitness" class="sport-log-form">
+            <div class="form-group">
+              <label class="form-label" for="fitness-category">Ana Kas Grubu</label>
+              <select class="form-control form-select" id="fitness-category">
+                <option value="fullbody">Tüm Vücut (Full Body)</option>
+                <option value="legs">Bacak / Core (Koşucu Özel)</option>
+                <option value="upper">Üst Vücut (Yüzücü/Bisikletçi Özel)</option>
+                <option value="mobility">Mobilite & Esneklik</option>
+              </select>
+            </div>
+            
+            <div id="fitness-exercises-container">
+              <div class="exercise-row card" style="padding:12px; margin-bottom:12px; background-color: var(--bg-secondary);">
+                <div class="form-group">
+                  <label class="form-label">Hareket Adı</label>
+                  <input type="text" class="form-control exercise-name" placeholder="Squat" required>
+                </div>
+                <div class="grid-3">
+                  <div class="form-group">
+                    <label class="form-label">Set</label>
+                    <input type="number" class="form-control exercise-sets" min="1" value="3" required>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Tekrar</label>
+                    <input type="number" class="form-control exercise-reps" min="1" value="10" required>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Kilo (kg)</label>
+                    <input type="number" class="form-control exercise-weight" min="0" step="0.5" value="40" required>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <button type="button" id="add-exercise-row-btn" class="btn btn-secondary mb-3 btn-full" style="padding: 8px 12px; border-radius: 10px;">+ Hareket Ekle</button>
+
+            <div class="form-group">
+              <label class="form-label" for="fitness-rpe">Zorluk Seviyesi (RPE: <span id="fitness-rpe-val" class="font-bold text-blue">6</span>/10)</label>
+              <input type="range" id="fitness-rpe" min="1" max="10" value="6" step="1" style="width:100%; margin-top:8px;">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="fitness-notes">Notlar</label>
+              <textarea class="form-control" id="fitness-notes" placeholder="Core bölgesi odaklı." rows="3"></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary btn-full mt-2">Fitness Antrenmanını Kaydet</button>
+          </form>
+
+        </div>
+      </section>
+
+
+      <!-- GÖRÜNÜM 5: PROFİL / AI ANTRENÖR (COACH / PROFILE) -->
+      <section id="view-profile" class="view-section">
+        <div class="card-header">
+          <h2 class="text-xl font-bold">Profil ve Yapay Zeka Koçu</h2>
+        </div>
+
+        <!-- 1. AI COACH CARD -->
+        <div class="card ai-coach-card no-press">
+          <div class="ai-header" style="display:flex; align-items:center; gap:12px; margin-bottom:14px;">
+            <div class="ai-avatar" style="font-size:32px;">🤖</div>
+            <div>
+              <h3 class="font-bold text-base">Gemini AI Coach</h3>
+              <span id="ai-status-badge" class="badge badge-local mt-1" style="display:inline-block;">Yerel Mod</span>
+            </div>
+          </div>
+          
+          <div class="ai-box" style="display:flex; flex-direction:column; gap:12px;">
+            <div id="ai-chat-output" class="ai-chat-output" style="max-height: 250px; overflow-y: auto; background-color: var(--bg-secondary); border-radius:12px; padding:12px; display:flex; flex-direction:column; gap:10px; font-size:13px; border:1px solid var(--card-border);">
+              <div class="ai-message message-bot" style="line-height:1.4;">
+                Merhaba! Ben senin yapay zeka antrenörünüm. Bugün yaptığın antrenmanları, vücut durumunu ve diyetini analiz etmem için **"Analiz Et"** butonuna basabilir veya bana doğrudan sorular sorabilirsin.
+              </div>
+            </div>
+            
+            <button id="ai-analyze-btn" class="btn btn-primary btn-full">⚡ Verilerimi Analiz Et & Rapor Al</button>
+            
+            <div class="chat-input-row" style="display:flex; gap:8px;">
+              <input type="text" id="ai-chat-input" class="form-control" placeholder="Antrenörüne sor..." style="flex:1;">
+              <button id="ai-send-btn" class="btn btn-secondary" style="padding:0 18px; border-radius:12px;">Sor</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. ANTRENMAN İÇE AKTARMA (GPX / TCX) -->
+        <div class="card strava-card no-press">
+          <div class="strava-header" style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
+            <span style="font-size:24px;">🟧</span>
+            <h3 class="font-bold text-base">Strava / GPX Antrenman İçe Aktar</h3>
+          </div>
+          <p class="text-sm text-secondary">Strava, Garmin, Polar veya herhangi bir saatten indirdiğin <strong>.gpx</strong> / <strong>.tcx</strong> dosyalarını yükle; mesafe, süre ve nabız otomatik aktarılsın.</p>
+
+          <button id="workout-import-btn" type="button" class="btn btn-primary btn-full mt-3" style="padding:12px;">📥 GPX / TCX Dosyası Seç</button>
+          <input type="file" id="workout-import-input" accept=".gpx,.tcx,application/gpx+xml,application/xml,text/xml" multiple style="display:none;">
+          <div id="workout-import-status" class="text-xs text-muted mt-2 text-center"></div>
+
+          <details style="margin-top:12px;">
+            <summary class="text-xs text-secondary" style="cursor:pointer;">Strava'dan dosya nasıl indirilir?</summary>
+            <div class="text-xs text-muted" style="margin-top:8px; line-height:1.6;">
+              <strong>Tek antrenman:</strong> strava.com → antrenmanı aç → sağ üstteki <strong>"..."</strong> → <strong>"GPX Olarak Dışa Aktar"</strong>.<br>
+              <strong>Tüm geçmiş:</strong> Strava → Ayarlar → Hesabım → <strong>"Verilerini İndir"</strong> → e-postaya gelen arşivdeki <strong>activities</strong> klasöründen .gpx dosyaları.
+            </div>
+          </details>
+        </div>
+
+        <!-- 3. PROFILE SETTINGS -->
+        <div class="card settings-card no-press">
+          <h3 class="font-bold text-base mb-3">Profil ve Hedef Ayarları</h3>
+          <form id="form-settings">
+            <div class="form-group">
+              <label class="form-label" for="settings-name">İsim</label>
+              <input class="form-control" type="text" id="settings-name" value="Triatlet Sporcu">
+            </div>
+            <div class="grid-2">
+              <div class="form-group">
+                <label class="form-label" for="settings-weight">Kilo (kg)</label>
+                <input class="form-control" type="number" id="settings-weight" step="0.1" value="75.0">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="settings-calories">Günlük Kalori Hedefi</label>
+                <input class="form-control" type="number" id="settings-calories" value="2500">
+              </div>
+            </div>
+            <div class="grid-3">
+              <div class="form-group">
+                <label class="form-label" for="settings-p-target">Protein (g)</label>
+                <input class="form-control" type="number" id="settings-p-target" value="150">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="settings-c-target">Karb (g)</label>
+                <input class="form-control" type="number" id="settings-c-target" value="300">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="settings-f-target">Yağ (g)</label>
+                <input class="form-control" type="number" id="settings-f-target" value="70">
+              </div>
+            </div>
+            
+            <div style="height:1px; background-color: var(--card-border); margin: 16px 0;"></div>
+            
+            <div class="form-group">
+              <label class="form-label" for="settings-gemini-key">Google Gemini API Key (Bulut Modu İçin)</label>
+              <input class="form-control" type="password" id="settings-gemini-key" placeholder="API Anahtarınızı girin">
+              <span class="text-xs text-muted mt-1" style="display:inline-block; font-size:10px;">Gemini API anahtarı tarayıcınızda (localStorage) saklanır, hiçbir sunucuya gönderilmez.</span>
+            </div>
+            
+            <button type="submit" class="btn btn-secondary btn-full mt-2">Ayarları Kaydet</button>
+          </form>
+        </div>
+
+        <!-- 4. VERİ YÖNETİMİ (YEDEKLEME / GERİ YÜKLEME) -->
+        <div class="card data-management-card no-press">
+          <h3 class="font-bold text-base mb-3">💾 Veri Yönetimi</h3>
+          <p class="text-sm text-secondary" style="margin-bottom:14px;">Tüm verileriniz (antrenman, diyet, plan ve profil) yalnızca bu cihazda saklanır. Veri kaybını önlemek ve cihaz değiştirdiğinizde taşımak için düzenli yedek alın.</p>
+          <div class="grid-2">
+            <button id="export-data-btn" type="button" class="btn btn-secondary" style="padding:10px;">📤 Dışa Aktar</button>
+            <button id="import-data-btn" type="button" class="btn btn-secondary" style="padding:10px;">📥 İçe Aktar</button>
+          </div>
+          <input type="file" id="import-file-input" accept="application/json,.json" style="display:none;">
+          <button id="reset-data-btn" type="button" class="btn btn-ghost btn-full mt-3" style="padding:10px; color:#ef4444; border-color: rgba(239,68,68,0.3);">🗑️ Tüm Verileri Sıfırla</button>
+        </div>
+
+      </section>
+
+
+      <!-- GÖRÜNÜM 6: ANALİZ & İSTATİSTİK -->
+      <section id="view-analysis" class="view-section">
+        <div class="card-header">
+          <h2 class="text-xl font-bold">Analiz & İstatistik</h2>
+        </div>
+
+        <!-- Bu Hafta Özet Kartları -->
+        <div class="analysis-summary-grid" id="analysis-summary"></div>
+
+        <!-- Haftalık Antrenman Yükü (Bar) -->
+        <div class="card no-press">
+          <div class="card-title">📈 Haftalık Antrenman Yükü</div>
+          <div id="glance-load-top"></div>
+          <div id="chart-weekly-load" class="chart-container"></div>
+          <div class="chart-legend" id="chart-weekly-load-legend"></div>
+          <div id="glance-load-insight"></div>
+        </div>
+
+        <!-- Branş Dağılımı (Donut) -->
+        <div class="card no-press">
+          <div class="card-title">🍩 Branş Dağılımı</div>
+          <div id="glance-dist-top"></div>
+          <div id="chart-sport-dist" class="chart-container chart-donut-wrap"></div>
+          <div id="glance-dist-insight"></div>
+        </div>
+
+        <!-- Uyku Trendi (Saat bar + Puan çizgi) -->
+        <div class="card no-press">
+          <div class="card-title">🌙 Uyku Trendi</div>
+          <div id="glance-sleep-top"></div>
+          <div id="chart-sleep" class="chart-container"></div>
+          <div class="chart-legend" id="chart-sleep-legend"></div>
+          <div id="glance-sleep-insight"></div>
+        </div>
+
+        <!-- HRV Trendi (Tek çizgi) -->
+        <div class="card no-press">
+          <div class="card-title">❤️ HRV Trendi</div>
+          <div id="glance-hrv-top"></div>
+          <div id="chart-hrv" class="chart-container"></div>
+          <div id="glance-hrv-insight"></div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Alt Navigasyon Çubuğu (Bottom Navigation Bar) -->
+    <nav class="bottom-nav">
+      <button class="bottom-nav-item active" data-view="today">
+        <svg viewBox="0 0 24 24" width="22" height="22">
+          <path fill="currentColor" d="M19,19H5V8H19M19,3H18V1H16V3H8V1H6V3H5C3.89,3 3,3.9 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5A2,2 0 0,0 19,3M16.53,11.06L15.47,10L11.59,13.88L9.88,12.17L8.82,13.23L11.59,16L16.53,11.06Z" />
+        </svg>
+        <span>Bugün</span>
+      </button>
+      
+      <button class="bottom-nav-item" data-view="program">
+        <svg viewBox="0 0 24 24" width="22" height="22">
+          <path fill="currentColor" d="M19 19H5V8H19M16.53 11.06L15.47 10L11.59 13.88L9.88 12.17L8.82 13.23L11.59 16L16.53 11.06M19 3H18V1H16V3H8V1H6V3H5C3.89 3 3 3.9 3 5V19C3 20.1 3.89 21 5 21H19C20.1 21 21 20.1 21 19V5C21 3.9 20.1 3 19 3Z" />
+        </svg>
+        <span>Program</span>
+      </button>
+      
+      <button class="bottom-nav-item" data-view="diet">
+        <svg viewBox="0 0 24 24" width="22" height="22">
+          <path fill="currentColor" d="M22,18A4,4 0 0,1 18,22H14A4,4 0 0,1 10,18V16H22V18M2,16H8V22H6A4,4 0 0,1 2,18V16M12,2A8,8 0 0,1 20,10V14H4V10A8,8 0 0,1 12,2M12,4A6,6 0 0,0 6,10H18A6,6 0 0,0 12,4Z" />
+        </svg>
+        <span>Diyet</span>
+      </button>
+      
+      <button class="bottom-nav-item" data-view="log">
+        <svg viewBox="0 0 24 24" width="22" height="22">
+          <path fill="currentColor" d="M17,14H19V17H22V19H19V22H17V19H14V17H17V14M12.8,5.15C12.45,5.15 12.1,5.3 11.85,5.55L4.7,12.7C4.2,13.2 4.2,14 4.7,14.5L9.5,19.3C10,19.8 10.8,19.8 11.3,19.3L18.45,12.15C18.7,11.9 18.85,11.55 18.85,11.2C18.85,10.85 18.7,10.5 18.45,10.25L13.75,5.55C13.5,5.3 13.15,5.15 12.8,5.15M12.8,7.28L16.73,11.2L11.3,16.63L7.38,12.7L12.8,7.28Z" />
+        </svg>
+        <span>Kaydet</span>
+      </button>
+      
+      <button class="bottom-nav-item" data-view="analysis">
+        <svg viewBox="0 0 24 24" width="22" height="22">
+          <path fill="currentColor" d="M22,21H2V3H4V19H6V10H10V19H12V6H16V19H18V14H22V21Z" />
+        </svg>
+        <span>Analiz</span>
+      </button>
+
+      <button class="bottom-nav-item" data-view="profile">
+        <svg viewBox="0 0 24 24" width="22" height="22">
+          <path fill="currentColor" d="M12,4A4,4 0 0,1 16,8A4,4 0 0,1 12,12A4,4 0 0,1 8,8A4,4 0 0,1 12,4M12,14C16.42,14 20,15.79 20,18V20H4V18C4,15.79 7.58,14 12,14Z" />
+        </svg>
+        <span>Profil</span>
+      </button>
+    </nav>
+
+  </div>
+
+  <!-- MODAL 1: ANTRENMAN PLANLAMA MODAL -->
+  <div id="modal-plan" class="modal-overlay">
+    <div class="modal-sheet">
+      <div class="modal-handle-bar"></div>
+      <div class="modal-header">
+        <h3 class="modal-title">Antrenman Planla</h3>
+        <button id="close-modal-plan" class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="form-plan-workout">
+          <div class="form-group">
+            <label class="form-label" for="plan-date">Tarih</label>
+            <input class="form-control" type="date" id="plan-date" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="plan-sport">Branş</label>
+            <select class="form-control form-select" id="plan-sport">
+              <option value="run">🏃 Koşu</option>
+              <option value="bike">🚴 Bisiklet</option>
+              <option value="swim">🏊 Yüzme</option>
+              <option value="fitness">🏋️ Fitness / Güç</option>
+            </select>
+          </div>
+          <div class="grid-2">
+            <div class="form-group">
+              <label class="form-label" for="plan-target-distance">Mesafe Hedefi (km/m)</label>
+              <input class="form-control" type="number" id="plan-target-distance" step="0.1" placeholder="Mesafe">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="plan-target-duration">Süre (Dk)</label>
+              <input class="form-control" type="number" id="plan-target-duration" placeholder="Süre">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="plan-details">Plan Detayları / Notlar</label>
+            <textarea class="form-control" id="plan-details" placeholder="Örn: 5x1000m tempo koşusu." rows="3"></textarea>
+          </div>
+          <button type="submit" class="btn btn-primary btn-full mt-2">Plana Ekle</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 2: BESİN EKLEME MODAL (DİYET) -->
+  <div id="modal-diet-add" class="modal-overlay">
+    <div class="modal-sheet">
+      <div class="modal-handle-bar"></div>
+      <div class="modal-header">
+        <h3 class="modal-title">Besin Ekle (Plan / Tüketilen)</h3>
+        <button id="close-modal-diet" class="modal-close">&times;</button>
+      </div>
+      
+      <div class="modal-body">
+        <!-- Arama Alanı -->
+        <div class="form-group">
+          <input type="text" id="food-search-input" class="form-control" placeholder="Gıda ismi arayın (Örn: Yulaf, Muz)...">
+          <div class="api-toggle-indicator mt-2" style="font-size:11px; display:flex; align-items:center; gap:6px; color: var(--text-secondary);">
+            <span class="dot green" style="width:8px; height:8px; border-radius:50%; background-color:#10b981; display:inline-block;"></span>
+            <span>Çevrimiçi Arama Aktif (Open Food Facts)</span>
+          </div>
+        </div>
+
+        <!-- Arama Sonuçları -->
+        <div id="food-search-results" class="search-results-list" style="max-height:180px; overflow-y:auto; margin-bottom:14px; border-radius:10px;">
+          <p class="text-xs text-muted text-center" style="padding: 10px 0;">Besin aramak için yukarıya yazmaya başlayın.</p>
+        </div>
+
+        <!-- Seçilen Besin Bilgisi ve Miktar Ayarı -->
+        <div id="food-selection-panel" class="card no-press hidden" style="background-color: var(--bg-secondary); border: 1px solid var(--card-border); margin-bottom:16px;">
+          <h4 id="selected-food-name" class="font-bold text-base">Seçilen Gıda</h4>
+          <div class="macro-badge-row mt-2" style="display:flex; gap:6px; flex-wrap:wrap;">
+            <span class="badge badge-blue"><span id="sel-cal">0</span> kcal</span>
+            <span class="badge badge-fitness">P: <span id="sel-p">0</span>g</span>
+            <span class="badge badge-bisiklet">C: <span id="sel-c">0</span>g</span>
+            <span class="badge badge-kosu">F: <span id="sel-f">0</span>g</span>
+          </div>
+          
+          <div class="grid-2 mt-3">
+            <div class="form-group">
+              <label class="form-label" for="food-portion-qty">Miktar</label>
+              <input class="form-control" type="number" id="food-portion-qty" value="100" min="1" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="food-portion-unit">Birim</label>
+              <select class="form-control form-select" id="food-portion-unit">
+                <option value="g">Gram (g)</option>
+                <option value="portion">Porsiyon (~150g)</option>
+                <option value="plate">Tabak (~300g)</option>
+                <option value="bowl">Kase (~250g)</option>
+                <option value="cup">Bardak / Kutu (~200ml)</option>
+                <option value="handful">Avuç (~30g)</option>
+              </select>
+            </div>
+          </div>
+          
+          <div class="grid-2 mt-2">
+            <button id="add-selected-food-btn" class="btn btn-primary">Tüketilen Ekle</button>
+            <button id="plan-selected-food-btn" class="btn btn-secondary">Plana Ekle</button>
+          </div>
+        </div>
+        
+        <div style="height:1px; background-color:var(--card-border); margin: 16px 0;"></div>
+        
+        <!-- Manuel Besin Ekleme Formu -->
+        <div class="manual-food-section">
+          <button id="toggle-manual-food-btn" class="btn btn-ghost btn-full" style="padding:10px; font-size:13px; border-radius:10px;">Listedebulamadın mı? Manuel Gıda Ekle</button>
+          
+          <form id="form-manual-food" class="hidden mt-3">
+            <div class="form-group">
+              <label class="form-label" for="manual-food-name">Besin Adı</label>
+              <input class="form-control" type="text" id="manual-food-name" placeholder="Özel Protein Bar" required>
+            </div>
+            <div class="grid-2">
+              <div class="form-group">
+                <label class="form-label" for="manual-food-cal">Kalori (kcal)</label>
+                <input class="form-control" type="number" id="manual-food-cal" value="0" min="0" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="manual-food-p">Protein (g)</label>
+                <input class="form-control" type="number" id="manual-food-p" value="0" min="0" required>
+              </div>
+            </div>
+            <div class="grid-2">
+              <div class="form-group">
+                <label class="form-label" for="manual-food-c">Karbonhidrat (g)</label>
+                <input class="form-control" type="number" id="manual-food-c" value="0" min="0" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="manual-food-f">Yağ (g)</label>
+                <input class="form-control" type="number" id="manual-food-f" value="0" min="0" required>
+              </div>
+            </div>
+            <div class="grid-2 mt-2">
+              <button type="submit" id="btn-manual-eat" class="btn btn-primary">Tüketilen Ekle</button>
+              <button type="button" id="btn-manual-plan" class="btn btn-secondary">Plana Ekle</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Javascripts -->
+  <script src="foods.js?v=1.8"></script>
+  <script src="app.js?v=1.8"></script>
+</body>
+</html>
