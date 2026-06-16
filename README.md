@@ -2,19 +2,40 @@
 
 TriTrack, triatletler ve koşucular için özel olarak tasarlanmış, minimalist, mobil öncelikli ve çevrimdışı çalışabilen (PWA) bir antrenman ve diyet takip uygulamasıdır.
 
-Uygulama herhangi bir sunucuya ihtiyaç duymadan tamamen tarayıcıda çalışır. Tüm antrenman, diyet, uyku ve HRV verileri tarayıcınızın yerel hafızasında (`localStorage`) güvenli bir şekilde saklanır.
+Uygulama herhangi bir sunucuya ihtiyaç duymadan tamamen tarayıcıda çalışır. Tüm antrenman, diyet, uyku, HRV ve uyku puanı verileri tarayıcınızın yerel hafızasında (`localStorage`) güvenli bir şekilde saklanır.
+
+---
+
+## ✨ Özellikler
+
+*   **🏠 Bugün (Dashboard):** Tarih gezinmeli günlük panel — vücut durumu (uyku, **uyku puanı**, HRV, kilo), günün antrenman ve diyet planları, yapılan antrenmanlar, kalori/makro özeti, "Yarın ne yiyeceğim?" önizlemesi.
+*   **🗓️ Program:** Haftalık antrenman programı + **antrenörden gelen planı toplu içe aktarma** (metin yapıştır → akıllı ayrıştır → canlı önizleme → ekle).
+*   **🍉 Diyet:** Günlük takip **ve haftalık plan** modu. Open Food Facts API + çevrimdışı yerel besin listesi. Porsiyon/tabak/kase/bardak/avuç birimleri.
+*   **🏋️ Antrenman Kaydı:** Koşu / Bisiklet / Yüzme / Güç formları (pace, güç, kadans, nabız, RPE). Kayıtları **düzenleme** ve **GPX/TCX dosyası içe aktarma** (Strava/Garmin/Polar).
+*   **📊 Analiz:** Saf SVG grafikler — haftalık yük, branş dağılımı, uyku & HRV trendi, "tek bakışta" özet kartları + yorumlar.
+*   **🤖 AI Koç:** Gemini (`gemini-2.5-flash`) bulut modu veya çevrimdışı yerel mod. Hazır-olma (readiness) hesabı, veri-farkında sohbet.
+*   **🚀 Onboarding:** İlk açılışta kurulum sihirbazı; kalori + makro hedeflerini Mifflin-St Jeor ile otomatik hesaplar.
+*   **💾 Veri Güvenliği:** JSON dışa/içe aktarma (yedekleme), şema doğrulama, tüm verileri sıfırlama.
+*   **📱 PWA:** Çevrimdışı çalışır, telefona kurulabilir, Play Store'a paketlenebilir.
 
 ---
 
 ## 📂 Dosya Yapısı
 
-*   `index.html` - Mobil öncelikli arayüz, sekmeler ve modal pencereler (tamamen CSS uyumlu sınıflarla güncellendi).
-*   `styles.css` - Açık/Karanlık tema desteği (mavi-siyah ve mavi-beyaz minimalist tema), planlama listeleri ve animasyonlar.
-*   `app.js` - State yönetimi, diyet araması (Open Food Facts API), yerel AI Antrenör (veya Gemini API bağlantısı) ve form lojikleri.
-*   `foods.js` - Çevrimdışı kullanılabilen 50'den fazla popüler sporcu gıdası listesi.
-*   `manifest.json` - Uygulamanın telefona kurulmasını ve Play Store'a dönüştürülmesini sağlayan PWA Manifestosu.
-*   `sw.js` - Çevrimdışı çalışabilirlik için dosyaları önbelleğe alan Service Worker (v2).
+*   `index.html` - Mobil öncelikli arayüz: 6 sekme (Bugün, Program, Diyet, Antrenman, Analiz, Profil), modal pencereler ve onboarding sihirbazı.
+*   `styles.css` - Açık/Karanlık tema, grafik (`.chart-*` / `.glance-*`), onboarding ve toplu plan stilleri, animasyonlar.
+*   `app.js` - State yönetimi, navigasyon, diyet araması (Open Food Facts), GPX/TCX ayrıştırma, SVG grafikler, AI Koç, onboarding ve form lojikleri (numaralı bölümlere ayrılmıştır).
+*   `foods.js` - Çevrimdışı kullanılabilen popüler sporcu gıdası listesi.
+*   `manifest.json` - PWA Manifestosu (telefona kurulum / Play Store).
+*   `sw.js` - Çevrimdışı önbellek Service Worker'ı (sürüm `CACHE_NAME` ile takip edilir).
 *   `icon-192.png` & `icon-512.png` - Uygulama logoları.
+
+### 📑 Dokümantasyon
+*   `GELISTIRME-GUNLUGU.md` - Adım adım geliştirme günlüğü (ne, neden, hangi fonksiyon).
+*   `CALISMA-DUZENI.md` - Git dal yapısı, commit kuralları, çoklu yapay zeka / sub-agent çalışma düzeni.
+*   `ux_report.md` - UX analizi ve düzeltme durumu.
+
+> **Sürüm kuralı:** Dosya değişince `index.html` içindeki `?v=1.X` ve `sw.js` içindeki `CACHE_NAME='tritrack-vX'` elle artırılır (eski önbellek sorunu olmasın). Güncel: `v1.13`.
 
 ---
 

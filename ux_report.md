@@ -3,6 +3,14 @@
 > **Tarih:** 16 Haziran 2026  
 > **Analiz Yöntemi:** Tüm kaynak kodun ([index.html](file:///c:/Users/User/Desktop/Fitness%20Takip/index.html), [app.js](file:///c:/Users/User/Desktop/Fitness%20Takip/app.js), [styles.css](file:///c:/Users/User/Desktop/Fitness%20Takip/styles.css), [foods.js](file:///c:/Users/User/Desktop/Fitness%20Takip/foods.js)) satır satır incelenmesiyle hazırlanmıştır.
 
+> ## 📌 Düzeltme Durumu (güncelleme: `v1.13`)
+>
+> **✅ Düzeltildi (11):** 1.2, 2.1, 2.2, 2.5, 2.6, 3.2, 3.3, 3.4, 4.1, 4.2, 6.5
+> **⏸️ Ertelendi (ürün kararı / büyük iş):** 1.1, 1.3, 1.4, 1.5, 2.3, 2.4, 3.1, 4.3, 4.4, 5.1, 5.2, 5.3, 6.1, 6.2, 6.3, 6.4, 6.6, 6.7
+>
+> Detaylar `GELISTIRME-GUNLUGU.md` → "UX Raporu Düzeltmeleri (1. parti)" bölümünde.
+> Aşağıdaki başlıklarda düzeltilenler **✅**, ertelenenler **⏸️** ile işaretlidir.
+
 ---
 
 ## Önem Dereceleri
@@ -368,40 +376,41 @@ Ama besin ekleme modalında miktar/birim sistemi **her zaman 100g bazlı hesapla
 
 ## Özet Tablosu
 
-| # | Bulgu | Derece | Kategori |
-|---|-------|--------|----------|
-| 1.1 | 6 sekme — kalabalık alt navigasyon | 🔴 | Navigasyon |
-| 1.2 | "Kaydet" sekmesi ismi belirsiz | 🟡 | Navigasyon |
-| 1.3 | Tarih değişimi diğer sekmelere yansımıyor | 🟡 | Navigasyon |
-| 1.4 | Antrenman kaydında tarih seçilemiyor | 🟡 | Form/Giriş |
-| 1.5 | Çift "Antrenman Kaydet" giriş noktası | 🟢 | Navigasyon |
-| 2.1 | Fitness süre alanı yok, yanlış tahmin | 🔴 | Form/Giriş |
-| 2.2 | Yüzme/plan mesafe birimi karışıklığı | 🟡 | Form/Giriş |
-| 2.3 | "Tüketilen Ekle" vs "Plana Ekle" karmaşası | 🟡 | Form/Giriş |
-| 2.4 | RPE slider mobilde zor | 🟡 | Form/Giriş |
-| 2.5 | Manuel besin ekleme gizli + yazım hatası | 🟡 | Form/Giriş |
-| 2.6 | Onboarding "Geri" butonu yer kaplıyor | 🟢 | Form/Giriş |
-| 3.1 | Silme: ham `confirm()` diyaloğu | 🔴 | Geri Bildirim |
-| 3.2 | Doğrulama: ham `alert()` mesajları | 🟡 | Geri Bildirim |
-| 3.3 | Kayıt sonrası form sıfırlanmıyor | 🟡 | Geri Bildirim |
-| 3.4 | Boş vücut durumu kaydı yapılabiliyor | 🟢 | Geri Bildirim |
-| 4.1 | Zoom devre dışı — erişilebilirlik engeli | 🔴 | Erişilebilirlik |
-| 4.2 | Silme/Düzenleme butonları çok küçük | 🟡 | Erişilebilirlik |
-| 4.3 | Scrollbar gizli — kaydırma fark edilmiyor | 🟡 | Erişilebilirlik |
-| 4.4 | Tema: Auto moda geri dönüş yok | 🟢 | Erişilebilirlik |
-| 5.1 | Tüm veri sadece localStorage'da | 🔴 | Veri Güvenliği |
-| 5.2 | Sıfırlama butonu tehlikeli konumda | 🟡 | Veri Güvenliği |
-| 5.3 | API anahtarı açık metin olarak saklanıyor | 🟡 | Veri Güvenliği |
-| 6.1 | Program: Güne tıklayarak plan ekleme yok | 🟡 | Düzen |
-| 6.2 | Diyet mod geçişi sezgisel değil | 🟡 | Düzen |
-| 6.3 | Inline stil fazlalığı, tutarsızlık | 🟡 | Düzen |
-| 6.4 | Analiz: Veri yokken boş durum yok | 🟡 | Düzen |
-| 6.5 | AI chat: Markdown render edilmiyor | 🟢 | Düzen |
-| 6.6 | Haftalık diyet: Toplam kalori eksik | 🟢 | Düzen |
-| 6.7 | Besin hesaplama: Porsiyon/100g tutarsızlığı | 🟢 | Düzen |
+| Durum | # | Bulgu | Derece | Kategori |
+|:---:|---|-------|--------|----------|
+| ⏸️ | 1.1 | 6 sekme — kalabalık alt navigasyon | 🔴 | Navigasyon |
+| ✅ | 1.2 | "Kaydet" sekmesi ismi belirsiz → "Antrenman" | 🟡 | Navigasyon |
+| ⏸️ | 1.3 | Tarih değişimi diğer sekmelere yansımıyor | 🟡 | Navigasyon |
+| ⏸️ | 1.4 | Antrenman kaydında tarih seçilemiyor | 🟡 | Form/Giriş |
+| ⏸️ | 1.5 | Çift "Antrenman Kaydet" giriş noktası | 🟢 | Navigasyon |
+| ✅ | 2.1 | Fitness süre alanı yok, yanlış tahmin | 🔴 | Form/Giriş |
+| ✅ | 2.2 | Yüzme/plan mesafe birimi karışıklığı | 🟡 | Form/Giriş |
+| ⏸️ | 2.3 | "Tüketilen Ekle" vs "Plana Ekle" karmaşası | 🟡 | Form/Giriş |
+| ⏸️ | 2.4 | RPE slider mobilde zor | 🟡 | Form/Giriş |
+| ✅ | 2.5 | Manuel besin ekleme yazım hatası | 🟡 | Form/Giriş |
+| ✅ | 2.6 | Onboarding "Geri" butonu yer kaplıyor | 🟢 | Form/Giriş |
+| ⏸️ | 3.1 | Silme: ham `confirm()` diyaloğu | 🔴 | Geri Bildirim |
+| ✅ | 3.2 | Doğrulama: ham `alert()` mesajları | 🟡 | Geri Bildirim |
+| ✅ | 3.3 | Kayıt sonrası form sıfırlanmıyor | 🟡 | Geri Bildirim |
+| ✅ | 3.4 | Boş vücut durumu kaydı yapılabiliyor | 🟢 | Geri Bildirim |
+| ✅ | 4.1 | Zoom devre dışı — erişilebilirlik engeli | 🔴 | Erişilebilirlik |
+| ✅ | 4.2 | Silme/Düzenleme butonları çok küçük | 🟡 | Erişilebilirlik |
+| ⏸️ | 4.3 | Scrollbar gizli — kaydırma fark edilmiyor | 🟡 | Erişilebilirlik |
+| ⏸️ | 4.4 | Tema: Auto moda geri dönüş yok | 🟢 | Erişilebilirlik |
+| ⏸️ | 5.1 | Tüm veri sadece localStorage'da | 🔴 | Veri Güvenliği |
+| ⏸️ | 5.2 | Sıfırlama butonu tehlikeli konumda | 🟡 | Veri Güvenliği |
+| ⏸️ | 5.3 | API anahtarı açık metin olarak saklanıyor | 🟡 | Veri Güvenliği |
+| ⏸️ | 6.1 | Program: Güne tıklayarak plan ekleme yok | 🟡 | Düzen |
+| ⏸️ | 6.2 | Diyet mod geçişi sezgisel değil | 🟡 | Düzen |
+| ⏸️ | 6.3 | Inline stil fazlalığı, tutarsızlık | 🟡 | Düzen |
+| ⏸️ | 6.4 | Analiz: Veri yokken boş durum yok | 🟡 | Düzen |
+| ✅ | 6.5 | AI chat: Markdown render edilmiyor | 🟢 | Düzen |
+| ⏸️ | 6.6 | Haftalık diyet: Toplam kalori eksik | 🟢 | Düzen |
+| ⏸️ | 6.7 | Besin hesaplama: Porsiyon/100g tutarsızlığı | 🟢 | Düzen |
 
 ---
 
-> **Toplam: 5 Kritik 🔴 · 16 Orta 🟡 · 8 Düşük 🟢**
+> **Başlangıç toplamı: 5 Kritik 🔴 · 16 Orta 🟡 · 8 Düşük 🟢 (29)**
+> **Durum: ✅ 11 düzeltildi · ⏸️ 18 ertelendi** (`v1.13` itibarıyla)
 
-Bu bulguları öncelik sırasına göre düzeltmek isterseniz, bir uygulama planı hazırlayabilirim.
+Ertelenenlerden öncelik önerisi: **3.1** (confirm → özel modal) ve **1.4** (antrenman tarih seçici).

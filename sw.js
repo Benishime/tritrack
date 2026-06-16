@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tritrack-v13';
+const CACHE_NAME = 'tritrack-v16';
 const ASSETS = [
   './',
   './index.html',

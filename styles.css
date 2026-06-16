@@ -434,6 +434,12 @@ html, body {
   transform: scale(0.92);
 }
 
+.btn-icon.active {
+  color: var(--accent-blue);
+  border-color: var(--accent-blue);
+  background-color: var(--accent-blue-light);
+}
+
 .btn-full {
   width: 100%;
 }
@@ -1570,3 +1576,15 @@ button#theme-toggle {
 }
 .tomorrow-preview-row .tp-meal { color: var(--text-secondary); min-width: 92px; font-weight: 600; }
 .tomorrow-preview-row .tp-items { color: var(--text-primary); }
+
+/* Bugün: sadece tiklenmiş (kaydı olmayan) tamamlanmış plan satırı */
+.workout-done-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  opacity: 0.9;
+}
+.workout-done-row .checklist-title { font-size: 13px; font-weight: 600; color: var(--text-primary); }

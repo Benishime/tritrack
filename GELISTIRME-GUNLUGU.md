@@ -9,7 +9,39 @@ Bu dosya, uygulamada adım adım yapılan geliştirmeleri kaydeder. Sonradan dö
 > - `index.html` içindeki `?v=1.X` (css + js linkleri)
 > - `sw.js` içindeki `CACHE_NAME = 'tritrack-vX'`
 >
-> **Son sürüm:** `?v=1.13` · `tritrack-v13`
+> **Son sürüm:** `?v=1.16` · `tritrack-v16`
+
+---
+
+## ✅ Navigasyon: Profil → header ikonu, alt menüde "Asistan"
+
+Alt menü yeniden düzenlendi (UX raporu 1.1 yönünde):
+
+- **Alt menüdeki "Profil" sekmesi → "🤖 Asistan"** oldu; içeriği yalnızca AI Koç kartı (yeni `#view-assistant`).
+- **Profil/kullanıcı bilgileri header'a taşındı:** üst köşeye **👤 profil ikonu** (`#profile-open-btn`)
+  eklendi → `#view-profile` (artık "Profil ve Ayarlar": GPX içe aktarma + ayarlar + veri yönetimi).
+- Navigasyon: header ikonu alt menüde olmayan `view-profile`'ı açar (`initNavigation` içinde özel handler);
+  alt menüye basınca ikon aktifliği kalkar. `refreshActiveView`'a `assistant` case'i eklendi.
+- AI Koç olay bağlayıcıları (`initProfileView`) DOM'da olduğu sürece çalışmaya devam ediyor (kart taşındı, ID'ler aynı).
+
+## ✅ Bugün: "Yarın Ne Yiyeceğim?" kartı kaldırıldı
+
+Bugün sekmesinde yalnızca bugüne ait şeyler kalsın diye yarın önizleme kartı (`renderTomorrowPreview`,
+`#tomorrow-diet-preview`, buton dinleyicisi) tamamen kaldırıldı. Yarın planı hâlâ **Diyet → Haftalık Plan**'da.
+
+---
+
+## ✅ Bugün: Plan ↔ Yapılan kartlarının ayrıştırılması (UX)
+
+"Bugünün Antrenman Planı" ve "Yapılan Antrenmanlar" kartları aynı işi iki yerde gösteriyordu
+(tamamlanan plan üstü çizili olarak planda kalıyor + ayrıca yapılanlarda görünüyordu).
+
+- **Plan kartı = yalnızca yapılacaklar:** `renderTodayView` artık sadece `!completed` planları listeler;
+  hepsi bitince "🎉 Bugünün tüm planlarını tamamladın!" mesajı.
+- **Tamamlananlar "Yapılan"a akar:** "Kaydet" ile loglanan plan, `saveWorkoutAndRoute` içinde
+  `plan.loggedWorkoutId = workout.id` ile kayda **bağlanır** → çift gösterim önlenir.
+- **Sadece tiklenen (detay girilmeyen) plan**, "Yapılan Antrenmanlar"da kompakt bir
+  `.workout-done-row` satırı + **"Geri al"** (yapılacaklara döndür) ile gösterilir.
 
 ---
 

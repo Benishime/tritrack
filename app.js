@@ -108,6 +108,25 @@ function initNavigation() {
   const navItems = document.querySelectorAll('.bottom-nav .bottom-nav-item');
   const views = document.querySelectorAll('.app-content .view-section');
 
+  // Header'daki profil ikonu → Profil ve Ayarlar görünümü (alt menüde değil)
+  const profileBtn = document.getElementById('profile-open-btn');
+  if (profileBtn) {
+    profileBtn.addEventListener('click', () => {
+      navItems.forEach(nav => nav.classList.remove('active'));
+      profileBtn.classList.add('active');
+      views.forEach(view => {
+        view.classList.remove('active');
+        if (view.id === 'view-profile') view.classList.add('active');
+      });
+      refreshActiveView('profile');
+    });
+  }
+
+  // Alt menüye basıldığında profil ikonunun aktifliğini kaldır
+  navItems.forEach(item => item.addEventListener('click', () => {
+    if (profileBtn) profileBtn.classList.remove('active');
+  }));
+
   navItems.forEach(item => {
     item.addEventListener('click', () => {
       const targetViewId = `view-${item.getAttribute('data-view')}`;
@@ -147,6 +166,9 @@ function refreshActiveView(viewName) {
       break;
     case 'profile':
       renderProfileView();
+      break;
+    case 'assistant':
+      renderProfileView(); // AI durum rozetini güncelle
       break;
     case 'analysis':
       renderAnalysisView();
@@ -233,15 +255,6 @@ function initTodayView() {
     document.querySelector('.bottom-nav [data-view="log"]').click();
   });
 
-  // "Yarın Ne Yiyeceğim?" → Diyet sekmesi + Haftalık Plan paneli
-  const tomorrowBtn = document.getElementById('tomorrow-plan-btn');
-  if (tomorrowBtn) {
-    tomorrowBtn.addEventListener('click', () => {
-      document.querySelector('.bottom-nav [data-view="diet"]').click();
-      switchDietPane('weekly');
-    });
-  }
-
   renderTodayView();
 }
 
@@ -263,41 +276,41 @@ function renderTodayView() {
   document.getElementById('input-hrv').value = bodyLog.hrv || '';
   document.getElementById('input-weight').value = bodyLog.weight || state.profile.weight || '';
 
-  // 1. Bugünün Antrenman Plan Listesi
+  // 1. Bugünün Antrenman Plan Listesi — yalnızca YAPILACAKLAR (tamamlananlar "Yapılan"a akar)
   const todayPlansList = document.getElementById('today-plans-list');
   const todayPlans = state.plans.filter(p => p.date === currentDateStr);
-  
+  const pendingPlans = todayPlans.filter(p => !p.completed);
+
   if (todayPlans.length === 0) {
     todayPlansList.innerHTML = '<p class="empty-state-text">Bugün için planlanmış bir antrenman yok.</p>';
+  } else if (pendingPlans.length === 0) {
+    todayPlansList.innerHTML = '<p class="empty-state-text">🎉 Bugünün tüm planlarını tamamladın!</p>';
   } else {
     todayPlansList.innerHTML = '';
-    todayPlans.forEach(plan => {
-      const isCompleted = plan.completed;
+    pendingPlans.forEach(plan => {
       const sportIcons = { run: '🏃', bike: '🚴', swim: '🏊', fitness: '🏋️' };
 
       const planItem = document.createElement('div');
-      planItem.className = `checklist-item ${isCompleted ? 'completed' : ''} border-highlight-${plan.sport}`;
+      planItem.className = `checklist-item border-highlight-${plan.sport}`;
       planItem.innerHTML = `
         <label class="checkbox-container">
-          <input type="checkbox" ${isCompleted ? 'checked' : ''} data-plan-id="${plan.id}">
+          <input type="checkbox" data-plan-id="${plan.id}">
           <span class="checkmark"></span>
           <div class="checklist-details">
             <span class="checklist-title">${sportIcons[plan.sport]} ${plan.details || 'Detay girilmedi'}</span>
             ${plan.targetDistance ? `<span class="checklist-meta">Hedef: ${plan.targetDistance} km / ${plan.targetDuration || 0} dk</span>` : plan.targetDuration ? `<span class="checklist-meta">Hedef: ${plan.targetDuration} dk</span>` : ''}
           </div>
         </label>
-        ${!isCompleted ? `<button class="btn btn-secondary quick-log-plan-btn" style="padding: 4px 8px; border-radius:6px; font-size:11px; height:auto;">Kaydet</button>` : ''}
+        <button class="btn btn-secondary quick-log-plan-btn" style="padding: 4px 8px; border-radius:6px; font-size:11px; height:auto;">Kaydet</button>
       `;
 
-      planItem.querySelector('input[type="checkbox"]').addEventListener('change', (e) => {
-        plan.completed = e.target.checked;
+      planItem.querySelector('input[type="checkbox"]').addEventListener('change', () => {
+        plan.completed = true; // tik → tamamlandı, "Yapılan"a akar
         saveState();
         renderTodayView();
       });
 
-      if (!isCompleted) {
-        planItem.querySelector('.quick-log-plan-btn').addEventListener('click', () => triggerQuickLog(plan));
-      }
+      planItem.querySelector('.quick-log-plan-btn').addEventListener('click', () => triggerQuickLog(plan));
 
       todayPlansList.appendChild(planItem);
     });
@@ -336,11 +349,18 @@ function renderTodayView() {
     });
   }
 
-  // 3. Bugün Yapılan Antrenmanlar
+  // 3. Bugün Yapılan Antrenmanlar = kaydedilen antrenmanlar + sadece tiklenen (kaydı olmayan) tamamlanmış planlar
   const todayWorkoutsList = document.getElementById('today-workouts-list');
   const todayWorkouts = state.workouts.filter(w => w.date === currentDateStr);
 
-  if (todayWorkouts.length === 0) {
+  // Bir plan kayda bağlıysa (Kaydet ile) burada ayrıca gösterme — çift olmasın.
+  // loggedWorkoutId yoksa (eski veri) aynı branştan bir kayıt varsa "kaydedilmiş" say.
+  const isPlanLogged = (plan) => plan.loggedWorkoutId
+    ? todayWorkouts.some(w => w.id === plan.loggedWorkoutId)
+    : todayWorkouts.some(w => w.sport === plan.sport);
+  const doneOnlyPlans = todayPlans.filter(p => p.completed && !isPlanLogged(p));
+
+  if (todayWorkouts.length === 0 && doneOnlyPlans.length === 0) {
     todayWorkoutsList.innerHTML = '<p class="empty-state-text">Henüz yapılan antrenman kaydedilmedi.</p>';
   } else {
     todayWorkoutsList.innerHTML = '';
@@ -398,40 +418,34 @@ function renderTodayView() {
 
       todayWorkoutsList.appendChild(card);
     });
+
+    // Sadece tiklenmiş (detay kaydı olmayan) tamamlanmış planlar — kompakt "tamamlandı" satırı
+    doneOnlyPlans.forEach(plan => {
+      const sportIcons = { run: '🏃', bike: '🚴', swim: '🏊', fitness: '🏋️' };
+      const row = document.createElement('div');
+      row.className = `card workout-done-row highlight-${plan.sport} no-press`;
+      row.innerHTML = `
+        <div class="flex-align" style="gap:8px;">
+          <span style="font-size:18px;">✅</span>
+          <div>
+            <span class="checklist-title">${sportIcons[plan.sport] || ''} ${plan.details || 'Antrenman'}</span>
+            <span class="text-xs text-muted" style="display:block;">Plan tamamlandı (detay girilmedi)</span>
+          </div>
+        </div>
+        <button class="btn btn-ghost undo-plan-btn" style="padding:4px 8px; border-radius:6px; font-size:11px; height:auto;" data-id="${plan.id}">Geri al</button>
+      `;
+      row.querySelector('.undo-plan-btn').addEventListener('click', () => {
+        plan.completed = false;
+        delete plan.loggedWorkoutId;
+        saveState();
+        renderTodayView();
+        showToast("Plan yapılacaklara geri alındı.");
+      });
+      todayWorkoutsList.appendChild(row);
+    });
   }
 
   updateDietSummaryDOM();
-  renderTomorrowPreview();
-}
-
-// Yarının diyet planını öğün öğün özetle (salt-okunur önizleme)
-function renderTomorrowPreview() {
-  const container = document.getElementById('tomorrow-diet-preview');
-  if (!container) return;
-
-  const tomorrow = addDaysStr(currentDateStr, 1);
-  const plans = state.dietPlans.filter(p => p.date === tomorrow);
-
-  if (plans.length === 0) {
-    container.innerHTML = `<p class="empty-state-text">Yarın için plan yok. Haftalık Plan'dan önceden ekleyebilirsin.</p>`;
-    return;
-  }
-
-  const totalKcal = Math.round(plans.reduce((s, p) => s + (p.calories || 0), 0));
-  let html = '';
-  MEAL_ORDER.forEach(meal => {
-    const items = plans.filter(p => p.meal === meal);
-    if (items.length === 0) return;
-    const meta = MEAL_META[meal];
-    const names = items.map(p => p.name).join(', ');
-    html += `
-      <div class="tomorrow-preview-row">
-        <span class="tp-meal">${meta.icon} ${meta.name}</span>
-        <span class="tp-items">${names}</span>
-      </div>`;
-  });
-  html += `<p class="text-xs text-muted" style="margin-top:8px;">Toplam planlanan: <strong>${totalKcal} kcal</strong></p>`;
-  container.innerHTML = html;
 }
 
 // Diyet planını tamamlandı/tamamlanmadı yapma lojiği
@@ -1885,6 +1899,7 @@ function saveWorkoutAndRoute(workout) {
   const matchingPlan = state.plans.find(p => p.date === currentDateStr && p.sport === workout.sport && !p.completed);
   if (matchingPlan) {
     matchingPlan.completed = true;
+    matchingPlan.loggedWorkoutId = workout.id; // çift gösterimi önlemek için planı kayda bağla
     showToast(`"${matchingPlan.details}" planı tamamlandı!`);
   }
 
