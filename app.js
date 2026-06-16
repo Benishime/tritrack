@@ -34,6 +34,9 @@ let currentDateStr = formatDate(new Date());
 // Düzenlenmekte olan antrenmanın id'si (null = yeni kayıt modu)
 let editingWorkoutId = null;
 
+// İlk açılış mı? (true ise onboarding sihirbazı gösterilir)
+let needsOnboarding = false;
+
 // Verileri LocalStorage'dan Çek
 function loadState() {
   const savedState = localStorage.getItem('tritrack_state');
@@ -48,150 +51,37 @@ function loadState() {
       if (!state.workouts) state.workouts = [];
       if (!state.diet) state.diet = [];
     } catch (e) {
-      console.error("Kayıtlı veri yüklenirken hata oluştu, varsayılanlar yükleniyor.", e);
-      seedMockData();
+      console.error("Kayıtlı veri yüklenirken hata oluştu, boş başlatılıyor.", e);
+      initEmptyState();
     }
   } else {
-    // İlk defa açılıyorsa mock verilerle doldur
-    seedMockData();
+    // İlk açılış: boş state + onboarding sihirbazı
+    initEmptyState();
   }
+}
+
+// Boş bir başlangıç state'i kur ve onboarding'i işaretle
+function initEmptyState() {
+  state = {
+    profile: {
+      name: "",
+      weight: null,
+      targetDailyCalories: 2500,
+      targetMacros: { protein: 150, carbs: 300, fat: 70 },
+      geminiApiKey: ""
+    },
+    holisticLogs: {},
+    plans: [],
+    dietPlans: [],
+    workouts: [],
+    diet: []
+  };
+  needsOnboarding = true;
 }
 
 // Verileri LocalStorage'a Kaydet
 function saveState() {
   localStorage.setItem('tritrack_state', JSON.stringify(state));
-}
-
-// Uygulamayı canlandırmak için Örnek Veriler (Seed Data)
-function seedMockData() {
-  const todayStr = currentDateStr;
-  
-  // Dün için tarih hesaplama
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayStr = formatDate(yesterday);
-
-  // Profil
-  state.profile = {
-    name: "Barış Özcan",
-    weight: 74.2,
-    targetDailyCalories: 2600,
-    targetMacros: { protein: 160, carbs: 320, fat: 75 },
-    geminiApiKey: ""
-  };
-
-  // Vücut Parametreleri
-  state.holisticLogs[todayStr] = { sleep: 8.0, sleepScore: 88, hrv: 62, weight: 74.2 };
-  state.holisticLogs[yesterdayStr] = { sleep: 7.5, sleepScore: 79, hrv: 68, weight: 74.5 };
-
-  // Antrenman Planları
-  state.plans = [
-    {
-      id: "p1",
-      date: todayStr,
-      sport: "run",
-      targetDistance: 12,
-      targetDuration: 60,
-      details: "12 km Tempo Koşusu. Hedef pace: 5:00 dk/km",
-      completed: false
-    },
-    {
-      id: "p2",
-      date: todayStr,
-      sport: "fitness",
-      targetDistance: null,
-      targetDuration: 45,
-      details: "Bacak güçlendirme & Core stabilitesi",
-      completed: false
-    },
-    {
-      id: "p3",
-      date: yesterdayStr,
-      sport: "bike",
-      targetDistance: 50,
-      targetDuration: 120,
-      details: "Düşük yoğunluklu Zone 2 sürüşü",
-      completed: true
-    }
-  ];
-
-  // Diyet Planları (Yeni Özellik Mock Data)
-  state.dietPlans = [
-    {
-      id: "dp1",
-      date: todayStr,
-      meal: "breakfast",
-      name: "Muzlu Yulaf Ezmesi",
-      calories: 485,
-      protein: 14.3,
-      carbs: 95,
-      fat: 7.3,
-      quantity: 120,
-      unit: "g",
-      completed: true // Varsayılan olarak tamamlandı
-    },
-    {
-      id: "dp2",
-      date: todayStr,
-      meal: "lunch",
-      name: "Tavuk Göğsü (Izgara, 200g) ve Pirinç Pilavı",
-      calories: 650,
-      protein: 62,
-      carbs: 80,
-      fat: 8,
-      quantity: 1,
-      unit: "piece",
-      completed: false
-    },
-    {
-      id: "dp3",
-      date: todayStr,
-      meal: "dinner",
-      name: "Fırın Somon Balığı (150g) ve Yeşil Salata",
-      calories: 420,
-      protein: 35,
-      carbs: 15,
-      fat: 22,
-      quantity: 1,
-      unit: "piece",
-      completed: false
-    }
-  ];
-
-  // Tamamlanan Antrenmanlar
-  state.workouts = [
-    {
-      id: "w1",
-      date: yesterdayStr,
-      sport: "bike",
-      duration: 7200, // 2 saat
-      distance: 51.5,
-      pace: "25.75 km/sa",
-      hr: 138,
-      rpe: 4,
-      power: 175,
-      cadence: 82,
-      notes: "Yol sürüşü, keyifli geçti. Rüzgar hafifti."
-    }
-  ];
-
-  // Tüketilen Diyet
-  state.diet = [
-    {
-      id: "fd_sync_dp1", // Bağlantılı ID
-      date: todayStr,
-      meal: "breakfast",
-      name: "Muzlu Yulaf Ezmesi",
-      calories: 485,
-      protein: 14.3,
-      carbs: 95,
-      fat: 7.3,
-      quantity: 120,
-      unit: "g"
-    }
-  ];
-
-  saveState();
 }
 
 // ==========================================
@@ -208,7 +98,10 @@ document.addEventListener('DOMContentLoaded', () => {
   initWorkoutLogView();
   initProfileView();
   initDataManagement();
+  initOnboarding();
   registerServiceWorker();
+
+  if (needsOnboarding) showOnboarding();
 });
 
 function initNavigation() {
@@ -2741,7 +2634,127 @@ function renderSportDistChart() {
 }
 
 // ==========================================
-// 13. YARDIMCI FONKSİYONLAR & PWA ARAÇLARI
+// 13. ONBOARDING SİHİRBAZI (İLK AÇILIŞ KURULUMU)
+// ==========================================
+
+let obStep = 1;
+let obActivityFactor = null;
+
+// Mifflin-St Jeor BMR × aktivite faktörü ile kalori + sporcu makroları
+function computeNutritionTargets({ weight, height, age, gender, activityFactor }) {
+  const bmr = 10 * weight + 6.25 * height - 5 * age + (gender === 'male' ? 5 : -161);
+  const calories = Math.round((bmr * activityFactor) / 10) * 10;
+  const protein = Math.round(1.8 * weight);           // dayanıklılık sporcusu: ~1.8 g/kg
+  const fat = Math.round((calories * 0.25) / 9);      // kalorinin ~%25'i yağdan
+  const carbs = Math.max(0, Math.round((calories - protein * 4 - fat * 9) / 4));
+  return { calories, protein, carbs, fat };
+}
+
+function initOnboarding() {
+  const overlay = document.getElementById('onboarding-overlay');
+  if (!overlay) return;
+
+  overlay.querySelectorAll('.ob-intensity-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      overlay.querySelectorAll('.ob-intensity-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      obActivityFactor = parseFloat(btn.dataset.factor);
+    });
+  });
+
+  document.getElementById('ob-next').addEventListener('click', obNext);
+  document.getElementById('ob-back').addEventListener('click', obBack);
+}
+
+function showOnboarding() {
+  obStep = 1;
+  obRenderStep();
+  document.getElementById('onboarding-overlay').classList.add('open');
+}
+
+function obRenderStep() {
+  const overlay = document.getElementById('onboarding-overlay');
+  overlay.querySelectorAll('.ob-step').forEach(s => { s.hidden = (parseInt(s.dataset.step) !== obStep); });
+  overlay.querySelectorAll('.ob-dot').forEach(d => d.classList.toggle('active', parseInt(d.dataset.step) <= obStep));
+  document.getElementById('ob-back').style.visibility = (obStep === 1) ? 'hidden' : 'visible';
+  document.getElementById('ob-next').innerText = (obStep === 4) ? '🚀 Başla' : 'İleri';
+}
+
+function obValidateStep() {
+  if (obStep === 1) {
+    if (!document.getElementById('ob-name').value.trim()) { alert('Lütfen ismini gir.'); return false; }
+  } else if (obStep === 2) {
+    const w = parseFloat(document.getElementById('ob-weight').value);
+    const h = parseFloat(document.getElementById('ob-height').value);
+    const a = parseInt(document.getElementById('ob-age').value);
+    if (!(w > 0) || !(h > 0) || !(a > 0)) { alert('Lütfen kilo, boy ve yaş bilgilerini gir.'); return false; }
+  } else if (obStep === 3) {
+    if (!obActivityFactor) { alert('Antrenman yoğunluğunu seç.'); return false; }
+  }
+  return true;
+}
+
+function obNext() {
+  if (!obValidateStep()) return;
+  if (obStep === 3) obFillSummary(); // 4. adıma geçmeden önce hesapla
+  if (obStep === 4) { obFinish(); return; }
+  obStep++;
+  obRenderStep();
+}
+
+function obBack() {
+  if (obStep > 1) { obStep--; obRenderStep(); }
+}
+
+function obFillSummary() {
+  const t = computeNutritionTargets({
+    weight: parseFloat(document.getElementById('ob-weight').value),
+    height: parseFloat(document.getElementById('ob-height').value),
+    age: parseInt(document.getElementById('ob-age').value),
+    gender: document.getElementById('ob-gender').value,
+    activityFactor: obActivityFactor
+  });
+  document.getElementById('ob-cal').value = t.calories;
+  document.getElementById('ob-protein').value = t.protein;
+  document.getElementById('ob-carbs').value = t.carbs;
+  document.getElementById('ob-fat').value = t.fat;
+}
+
+function obFinish() {
+  state.profile = {
+    name: document.getElementById('ob-name').value.trim(),
+    weight: parseFloat(document.getElementById('ob-weight').value),
+    height: parseFloat(document.getElementById('ob-height').value),
+    age: parseInt(document.getElementById('ob-age').value),
+    gender: document.getElementById('ob-gender').value,
+    activityFactor: obActivityFactor,
+    targetDailyCalories: parseInt(document.getElementById('ob-cal').value) || 2500,
+    targetMacros: {
+      protein: parseInt(document.getElementById('ob-protein').value) || 150,
+      carbs: parseInt(document.getElementById('ob-carbs').value) || 300,
+      fat: parseInt(document.getElementById('ob-fat').value) || 70
+    },
+    geminiApiKey: ""
+  };
+
+  needsOnboarding = false;
+  saveState();
+  document.getElementById('onboarding-overlay').classList.remove('open');
+
+  // Profil formunu ve görünümleri yeni profile göre tazele
+  document.getElementById('settings-name').value = state.profile.name;
+  document.getElementById('settings-weight').value = state.profile.weight;
+  document.getElementById('settings-calories').value = state.profile.targetDailyCalories;
+  document.getElementById('settings-p-target').value = state.profile.targetMacros.protein;
+  document.getElementById('settings-c-target').value = state.profile.targetMacros.carbs;
+  document.getElementById('settings-f-target').value = state.profile.targetMacros.fat;
+
+  renderTodayView();
+  showToast(`Hoş geldin ${state.profile.name}! 🎉`);
+}
+
+// ==========================================
+// 14. YARDIMCI FONKSİYONLAR & PWA ARAÇLARI
 // ==========================================
 
 function showToast(message) {

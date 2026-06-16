@@ -9,7 +9,7 @@ Bu dosya, uygulamada adım adım yapılan geliştirmeleri kaydeder. Sonradan dö
 > - `index.html` içindeki `?v=1.X` (css + js linkleri)
 > - `sw.js` içindeki `CACHE_NAME = 'tritrack-vX'`
 >
-> **Son sürüm:** `?v=1.10` · `tritrack-v10`
+> **Son sürüm:** `?v=1.11` · `tritrack-v11`
 
 ---
 
@@ -118,6 +118,19 @@ AI Koç hem bulut (Gemini) hem yerel modda zenginleştirildi ([app.js](app.js) b
 hem "🍽 Tüketilen" bölümünde çıkıyordu. Çözüm: "Tüketilen" listesi artık `fd_sync_` ile başlayan
 (plandan otomatik gelen) öğeleri **göstermiyor** — plan satırı zaten işaretli görünüyor, kalori toplamı
 yine doğru (toplamlar `state.diet`'ten okunuyor).
+
+## ✅ Onboarding Sihirbazı (sahte seed verisi kaldırıldı)
+
+İlk açılışta sahte "Barış Özcan" demo verisi (`seedMockData`) **tamamen kaldırıldı**; yerine 4 adımlık
+kurulum sihirbazı geldi ([index.html](index.html) `#onboarding-overlay`, [app.js](app.js) bölüm 13):
+
+- **Adım 1:** isim · **Adım 2:** kilo/boy/yaş/cinsiyet · **Adım 3:** haftalık antrenman yoğunluğu
+  (Hafif/Orta/Yüksek/Çok Yüksek) · **Adım 4:** otomatik hesaplanan kalori+makro (düzenlenebilir).
+- **Otomatik hesap:** `computeNutritionTargets` — Mifflin-St Jeor BMR × aktivite faktörü; protein 1.8 g/kg,
+  yağ kalorinin %25'i, kalan karbonhidrat (dayanıklılık sporcusu profili).
+- İlk açılış: `initEmptyState()` boş state kurar + `needsOnboarding=true` → `showOnboarding()`.
+  Profil'e ayrıca `height/age/gender/activityFactor` da kaydedilir.
+- Mevcut kullanıcılar etkilenmez (kayıtlı state varsa sihirbaz çıkmaz). Test için: verileri sıfırla veya gizli sekme.
 
 ---
 

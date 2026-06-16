@@ -1203,4 +1203,112 @@ button#theme-toggle {
   line-height: 1.45;
 }
 
+/* ==========================================================================
+   ONBOARDING SİHİRBAZI
+   ========================================================================== */
+.onboarding-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: var(--bg-primary);
+}
+
+.onboarding-overlay.open {
+  display: flex;
+}
+
+.onboarding-card {
+  width: 100%;
+  max-width: 420px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 20px;
+  padding: 24px 22px 20px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+  animation: viewTransition 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.onboarding-dots {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.ob-dot {
+  width: 28px;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--bg-tertiary, var(--card-border));
+  transition: background 0.25s ease;
+}
+
+.ob-dot.active {
+  background: var(--accent-blue);
+}
+
+.ob-emoji {
+  font-size: 34px;
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.ob-title {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+
+.ob-sub {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 18px;
+  line-height: 1.4;
+}
+
+.ob-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 12px;
+}
+
+.ob-intensity-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ob-intensity-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 1.5px solid var(--card-border);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.ob-intensity-btn strong { font-size: 14px; }
+.ob-intensity-btn span { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+.ob-intensity-btn.selected {
+  border-color: var(--accent-blue);
+  background: var(--accent-blue-light);
+}
+
+.onboarding-nav {
+  display: flex;
+  gap: 10px;
+  margin-top: 22px;
+}
+
 
