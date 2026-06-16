@@ -135,7 +135,12 @@ function refreshActiveView(viewName) {
       renderProgramView();
       break;
     case 'diet':
-      renderDietView();
+      // Aktif panele göre render et (günlük takip / haftalık plan)
+      if (document.getElementById('diet-weekly')?.classList.contains('active')) {
+        renderWeeklyDietView();
+      } else {
+        renderDietView();
+      }
       break;
     case 'log':
       resetWorkoutForms();
@@ -222,6 +227,15 @@ function initTodayView() {
     document.querySelector('.bottom-nav [data-view="log"]').click();
   });
 
+  // "Yarın Ne Yiyeceğim?" → Diyet sekmesi + Haftalık Plan paneli
+  const tomorrowBtn = document.getElementById('tomorrow-plan-btn');
+  if (tomorrowBtn) {
+    tomorrowBtn.addEventListener('click', () => {
+      document.querySelector('.bottom-nav [data-view="diet"]').click();
+      switchDietPane('weekly');
+    });
+  }
+
   renderTodayView();
 }
 
@@ -293,8 +307,7 @@ function renderTodayView() {
     todayDietPlansList.innerHTML = '';
     todayDietPlans.forEach(plan => {
       const isCompleted = plan.completed;
-      const mealIcons = { breakfast: '🍳', lunch: '🍗', dinner: '🥗', snack: '🍌' };
-      const mealNames = { breakfast: 'Kahvaltı', lunch: 'Öğle', dinner: 'Akşam', snack: 'Atıştırmalık' };
+      const meta = MEAL_META[plan.meal] || { icon: '🍽', name: plan.meal };
 
       const planItem = document.createElement('div');
       planItem.className = `checklist-item ${isCompleted ? 'completed' : ''} border-highlight-diet`;
@@ -303,8 +316,8 @@ function renderTodayView() {
           <input type="checkbox" ${isCompleted ? 'checked' : ''} data-diet-plan-id="${plan.id}">
           <span class="checkmark" style="background-color: var(--bg-tertiary);"></span>
           <div class="checklist-details">
-            <span class="checklist-title">${mealIcons[plan.meal]} ${plan.name}</span>
-            <span class="checklist-meta">${mealNames[plan.meal]} | ${plan.calories} kcal (P: ${plan.protein}g C: ${plan.carbs}g F: ${plan.fat}g)</span>
+            <span class="checklist-title">${meta.icon} ${plan.name}</span>
+            <span class="checklist-meta">${meta.name} | ${plan.calories} kcal (P: ${plan.protein}g C: ${plan.carbs}g F: ${plan.fat}g)</span>
           </div>
         </label>
       `;
@@ -382,6 +395,37 @@ function renderTodayView() {
   }
 
   updateDietSummaryDOM();
+  renderTomorrowPreview();
+}
+
+// Yarının diyet planını öğün öğün özetle (salt-okunur önizleme)
+function renderTomorrowPreview() {
+  const container = document.getElementById('tomorrow-diet-preview');
+  if (!container) return;
+
+  const tomorrow = addDaysStr(currentDateStr, 1);
+  const plans = state.dietPlans.filter(p => p.date === tomorrow);
+
+  if (plans.length === 0) {
+    container.innerHTML = `<p class="empty-state-text">Yarın için plan yok. Haftalık Plan'dan önceden ekleyebilirsin.</p>`;
+    return;
+  }
+
+  const totalKcal = Math.round(plans.reduce((s, p) => s + (p.calories || 0), 0));
+  let html = '';
+  MEAL_ORDER.forEach(meal => {
+    const items = plans.filter(p => p.meal === meal);
+    if (items.length === 0) return;
+    const meta = MEAL_META[meal];
+    const names = items.map(p => p.name).join(', ');
+    html += `
+      <div class="tomorrow-preview-row">
+        <span class="tp-meal">${meta.icon} ${meta.name}</span>
+        <span class="tp-items">${names}</span>
+      </div>`;
+  });
+  html += `<p class="text-xs text-muted" style="margin-top:8px;">Toplam planlanan: <strong>${totalKcal} kcal</strong></p>`;
+  container.innerHTML = html;
 }
 
 // Diyet planını tamamlandı/tamamlanmadı yapma lojiği
@@ -638,6 +682,22 @@ function renderProgramView() {
 
 let activeMealSelector = 'breakfast'; // Hangi öğüne besin eklenecek
 
+// Diyet planı eklenirken hedef gün (haftalık planlamada ileri tarih olabilir).
+// Günlük takip ekranından açılınca currentDateStr'e eşitlenir.
+let dietTargetDate = currentDateStr;
+
+// Haftalık Plan görünümünde gösterilen haftanın bir günü (◀ ▶ ile gezinir)
+let dietWeekAnchor = currentDateStr;
+
+// Öğün meta bilgisi (ikon + Türkçe ad) — tek kaynak, tekrarı önler
+const MEAL_META = {
+  breakfast: { icon: '🍳', name: 'Kahvaltı' },
+  lunch:     { icon: '🍗', name: 'Öğle' },
+  dinner:    { icon: '🥗', name: 'Akşam' },
+  snack:     { icon: '🍌', name: 'Atıştırmalık' }
+};
+const MEAL_ORDER = ['breakfast', 'lunch', 'dinner', 'snack'];
+
 // Birimlerin gram karşılıkları (besin değerleri 100g bazlıdır)
 const UNIT_GRAMS = {
   g: 1,          // 1 gram
@@ -660,6 +720,19 @@ function formatPortion(qty, unit) {
   return unit === 'g' ? `${qty}${label}` : `${qty} ${label}`;
 }
 
+// Tarihi kısa, okunabilir Türkçe etikete çevir (örn. "14 Haz Cmt", "bugün", "yarın")
+function shortDateLabel(dateStr) {
+  if (dateStr === currentDateStr) return 'bugün';
+  if (dateStr === addDaysStr(currentDateStr, 1)) return 'yarın';
+  const d = new Date(dateStr);
+  return d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', weekday: 'short' });
+}
+
+// Plan eklenirken toast'ta gösterilecek hedef gün etiketi
+function dietPlanTargetLabel() {
+  return dietTargetDate === currentDateStr ? 'diyet' : `${shortDateLabel(dietTargetDate)}`;
+}
+
 function initDietView() {
   const modal = document.getElementById('modal-diet-add');
   const closeBtn = document.getElementById('close-modal-diet');
@@ -668,12 +741,8 @@ function initDietView() {
   document.addEventListener('click', (e) => {
     if (e.target.classList.contains('add-food-to-meal-btn')) {
       const mealSection = e.target.closest('.meal-section');
-      activeMealSelector = mealSection.getAttribute('data-meal');
-      
-      searchInput.value = '';
-      document.getElementById('food-search-results').innerHTML = '<p class="text-xs text-muted text-center" style="padding: 10px 0;">Besin aramak için yukarıya yazmaya başlayın.</p>';
-      document.getElementById('food-selection-panel').classList.add('hidden');
-      modal.classList.add('open');
+      // Günlük takip ekranı: hedef gün = o anki gün
+      openDietModal(mealSection.getAttribute('data-meal'), currentDateStr);
     }
   });
 
@@ -725,7 +794,68 @@ function initDietView() {
     saveManualFood(e, true);
   });
 
+  // Mod geçişi: Günlük Takip / Haftalık Plan
+  document.querySelectorAll('.diet-segment-btn').forEach(btn => {
+    btn.addEventListener('click', () => switchDietPane(btn.getAttribute('data-diet-pane')));
+  });
+
+  // Haftalık plan navigasyonu (◀ ▶)
+  document.getElementById('diet-week-prev').addEventListener('click', () => {
+    dietWeekAnchor = addDaysStr(dietWeekAnchor, -7);
+    renderWeeklyDietView();
+  });
+  document.getElementById('diet-week-next').addEventListener('click', () => {
+    dietWeekAnchor = addDaysStr(dietWeekAnchor, 7);
+    renderWeeklyDietView();
+  });
+
   renderDietView();
+}
+
+// Diyet sekmesindeki paneller arası geçiş (daily | weekly)
+function switchDietPane(pane) {
+  document.querySelectorAll('.diet-segment-btn').forEach(b =>
+    b.classList.toggle('active', b.getAttribute('data-diet-pane') === pane));
+  document.getElementById('diet-daily').classList.toggle('active', pane === 'daily');
+  document.getElementById('diet-weekly').classList.toggle('active', pane === 'weekly');
+
+  if (pane === 'weekly') {
+    dietWeekAnchor = currentDateStr; // her açılışta o anki haftaya dön
+    renderWeeklyDietView();
+  } else {
+    renderDietView();
+  }
+}
+
+// Besin ekleme modalını belirli bir öğün + hedef gün için aç.
+// Günlük takipten çağrılınca targetDate = currentDateStr (plan da tüketim de aynı güne).
+// Haftalık plandan çağrılınca targetDate = seçilen gün (yalnızca plana eklenir).
+function openDietModal(meal, targetDate) {
+  const modal = document.getElementById('modal-diet-add');
+  activeMealSelector = meal;
+  dietTargetDate = targetDate || currentDateStr;
+
+  // Arama / seçim panelini sıfırla
+  document.getElementById('food-search-input').value = '';
+  document.getElementById('food-search-results').innerHTML =
+    '<p class="text-xs text-muted text-center" style="padding: 10px 0;">Besin aramak için yukarıya yazmaya başlayın.</p>';
+  document.getElementById('food-selection-panel').classList.add('hidden');
+
+  const manualForm = document.getElementById('form-manual-food');
+  if (manualForm) manualForm.classList.add('hidden');
+
+  // Bağlam etiketi: hangi gün + öğün için planlandığını göster
+  const ctx = document.getElementById('diet-modal-context');
+  if (ctx) {
+    const meta = MEAL_META[meal];
+    if (dietTargetDate === currentDateStr) {
+      ctx.textContent = `${meta.icon} ${meta.name} — bugün için`;
+    } else {
+      ctx.textContent = `📅 ${shortDateLabel(dietTargetDate)} · ${meta.icon} ${meta.name} planlanıyor`;
+    }
+  }
+
+  modal.classList.add('open');
 }
 
 function saveManualFood(e, isPlanned) {
@@ -745,7 +875,7 @@ function saveManualFood(e, isPlanned) {
   if (isPlanned) {
     const newPlan = {
       id: 'dp_' + Date.now(),
-      date: currentDateStr,
+      date: dietTargetDate,
       meal: activeMealSelector,
       name: name,
       calories: cal,
@@ -757,7 +887,7 @@ function saveManualFood(e, isPlanned) {
       completed: false
     };
     state.dietPlans.push(newPlan);
-    showToast(`"${name}" diyet planına eklendi.`);
+    showToast(`"${name}" ${dietPlanTargetLabel()} planına eklendi.`);
   } else {
     const newFood = {
       id: 'fd_' + Date.now(),
@@ -960,7 +1090,7 @@ function addSelectedFoodToState(isPlanned) {
   if (isPlanned) {
     const calculatedFood = {
       id: 'dp_' + Date.now(),
-      date: currentDateStr,
+      date: dietTargetDate,
       meal: activeMealSelector,
       name: selectedFoodObject.name,
       calories: Math.round(selectedFoodObject.calories * ratio),
@@ -972,7 +1102,7 @@ function addSelectedFoodToState(isPlanned) {
       completed: false
     };
     state.dietPlans.push(calculatedFood);
-    showToast(`"${calculatedFood.name}" diyet planına eklendi.`);
+    showToast(`"${calculatedFood.name}" ${dietPlanTargetLabel()} planına eklendi.`);
   } else {
     const calculatedFood = {
       id: 'fd_' + Date.now(),
@@ -1112,6 +1242,174 @@ function renderDietView() {
   });
 
   updateDietSummaryDOM();
+}
+
+// ==========================================
+// 6.B HAFTALIK DİYET PLANI (İLERİ TARİHLİ PLANLAMA)
+// ==========================================
+
+// Bir günün planlı öğünlerinin toplam kalorisi
+function dayPlanCalories(dateStr) {
+  return state.dietPlans
+    .filter(p => p.date === dateStr)
+    .reduce((sum, p) => sum + (p.calories || 0), 0);
+}
+
+// Haftalık plan görünümünü çiz (dietWeekAnchor haftasının Pzt–Paz'ı)
+function renderWeeklyDietView() {
+  const list = document.getElementById('weekly-diet-list');
+  if (!list) return;
+
+  const weekStart = mondayOf(dietWeekAnchor);
+  const weekEnd = addDaysStr(weekStart, 6);
+
+  // Başlık: tarih aralığı
+  const sd = new Date(weekStart), ed = new Date(weekEnd);
+  const fmt = d => d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' });
+  document.getElementById('diet-week-title').textContent = `${fmt(sd)} – ${fmt(ed)}`;
+
+  const dayNames = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar'];
+  list.innerHTML = '';
+
+  for (let i = 0; i < 7; i++) {
+    const dateStr = addDaysStr(weekStart, i);
+    const d = new Date(dateStr);
+    const isToday = dateStr === currentDateStr;
+    const kcal = Math.round(dayPlanCalories(dateStr));
+
+    const card = document.createElement('div');
+    card.className = `diet-day-card${isToday ? ' is-today' : ''}`;
+
+    // Başlık + günlük toplam kalori
+    let html = `
+      <div class="diet-day-head">
+        <span class="diet-day-title">${d.getDate()} ${d.toLocaleDateString('tr-TR', { month: 'short' })} · ${dayNames[i]}${isToday ? ' (bugün)' : ''}</span>
+        ${kcal > 0 ? `<span class="diet-day-kcal">${kcal} kcal</span>` : ''}
+      </div>`;
+
+    // Öğün satırları
+    MEAL_ORDER.forEach(meal => {
+      const meta = MEAL_META[meal];
+      const items = state.dietPlans.filter(p => p.date === dateStr && p.meal === meal);
+      html += `
+        <div class="diet-meal-row">
+          <div class="diet-meal-row-head">
+            <span class="meal-label">${meta.icon} ${meta.name}</span>
+            <button class="diet-meal-add-btn" data-date="${dateStr}" data-meal="${meal}">+ Ekle</button>
+          </div>`;
+      if (items.length === 0) {
+        html += `<p class="diet-meal-empty">—</p>`;
+      } else {
+        items.forEach(p => {
+          html += `
+            <div class="diet-plan-chip">
+              <div>
+                <span class="chip-name">${p.name}</span>
+                <span class="chip-meta">${formatPortion(p.quantity, p.unit)} · ${p.calories} kcal · P:${p.protein}g</span>
+              </div>
+              <button class="chip-del" data-plan-id="${p.id}" aria-label="Sil">&times;</button>
+            </div>`;
+        });
+      }
+      html += `</div>`;
+    });
+
+    // Hızlı eylemler: kopyala
+    html += `
+      <div class="diet-day-actions">
+        <button class="copy-day-tomorrow" data-date="${dateStr}">⧉ Ertesi güne kopyala</button>
+        <button class="apply-day-week" data-date="${dateStr}">⇉ Tüm haftaya uygula</button>
+      </div>`;
+
+    card.innerHTML = html;
+
+    // + Ekle → modalı o gün + öğün için aç
+    card.querySelectorAll('.diet-meal-add-btn').forEach(btn => {
+      btn.addEventListener('click', () =>
+        openDietModal(btn.getAttribute('data-meal'), btn.getAttribute('data-date')));
+    });
+
+    // Plan kalemi sil
+    card.querySelectorAll('.chip-del').forEach(btn => {
+      btn.addEventListener('click', () => deleteDietPlan(btn.getAttribute('data-plan-id')));
+    });
+
+    // Günü kopyala / haftaya uygula
+    card.querySelector('.copy-day-tomorrow').addEventListener('click', () => {
+      copyDietDay(dateStr, addDaysStr(dateStr, 1));
+    });
+    card.querySelector('.apply-day-week').addEventListener('click', () => {
+      applyDayToWeek(dateStr);
+    });
+
+    list.appendChild(card);
+  }
+}
+
+// Bir plan kalemini sil (haftalık görünümden). Tamamlanmışsa tüketilenden de düşür.
+function deleteDietPlan(planId) {
+  const plan = state.dietPlans.find(p => p.id === planId);
+  if (!plan) return;
+  state.dietPlans = state.dietPlans.filter(p => p.id !== planId);
+  state.diet = state.diet.filter(f => f.id !== 'fd_sync_' + planId);
+  saveState();
+  renderWeeklyDietView();
+  renderTodayView();
+  showToast("Plan kalemi silindi.");
+}
+
+// Bir günün planlı öğünlerini hedef güne klonla (tüketilenlere dokunmaz)
+function copyDietDay(fromDate, toDate) {
+  const items = state.dietPlans.filter(p => p.date === fromDate);
+  if (items.length === 0) {
+    showToast("Kopyalanacak plan yok.");
+    return;
+  }
+  items.forEach((p, idx) => {
+    state.dietPlans.push({
+      ...p,
+      id: 'dp_' + Date.now() + '_' + idx,
+      date: toDate,
+      completed: false
+    });
+  });
+  saveState();
+  renderWeeklyDietView();
+  renderTodayView();
+  showToast(`${items.length} öğün ${shortDateLabel(toDate)} gününe kopyalandı.`);
+}
+
+// Bir günün planını aynı haftanın diğer günlerine uygula (önce o günleri temizler)
+function applyDayToWeek(fromDate) {
+  const source = state.dietPlans.filter(p => p.date === fromDate);
+  if (source.length === 0) {
+    showToast("Önce bu güne öğün ekle.");
+    return;
+  }
+  if (!confirm("Bu günün planı haftanın diğer 6 gününe kopyalanacak.\nO günlerdeki mevcut planlar silinecek. Devam edilsin mi?")) return;
+
+  const weekStart = mondayOf(fromDate);
+  for (let i = 0; i < 7; i++) {
+    const dateStr = addDaysStr(weekStart, i);
+    if (dateStr === fromDate) continue;
+    // Hedef günün eski planlarını ve onlara bağlı tüketilenleri temizle
+    const oldIds = state.dietPlans.filter(p => p.date === dateStr).map(p => p.id);
+    state.dietPlans = state.dietPlans.filter(p => p.date !== dateStr);
+    state.diet = state.diet.filter(f => !oldIds.some(id => f.id === 'fd_sync_' + id));
+    // Kaynağı klonla
+    source.forEach((p, idx) => {
+      state.dietPlans.push({
+        ...p,
+        id: 'dp_' + Date.now() + '_' + i + '_' + idx,
+        date: dateStr,
+        completed: false
+      });
+    });
+  }
+  saveState();
+  renderWeeklyDietView();
+  renderTodayView();
+  showToast("Plan tüm haftaya uygulandı ✅");
 }
 
 // ==========================================
