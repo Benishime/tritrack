@@ -93,6 +93,17 @@
           </div>
         </div>
 
+        <!-- Yarının Diyet Planı (Önizleme) -->
+        <div class="card tomorrow-diet-card no-press">
+          <div class="card-header">
+            <div class="card-title">🌅 Yarın Ne Yiyeceğim?</div>
+            <button id="tomorrow-plan-btn" class="btn btn-secondary btn-icon" style="width:auto; padding: 4px 10px; height: 32px; font-size:12px;">🗓️ Planla</button>
+          </div>
+          <div id="tomorrow-diet-preview">
+            <!-- Dinamik doldurulacak -->
+          </div>
+        </div>
+
         <!-- Bugün Gerçekleşen Antrenmanlar -->
         <div class="card completed-workouts-card no-press">
           <div class="card-header">
@@ -200,9 +211,17 @@
       <!-- GÖRÜNÜM 3: DİYET TAKİBİ (DIET TRACKER) -->
       <section id="view-diet" class="view-section">
         <div class="card-header">
-          <h2 class="text-xl font-bold">Günlük Diyet Takibi</h2>
+          <h2 class="text-xl font-bold">Diyet</h2>
         </div>
 
+        <!-- Mod Geçişi: Günlük Takip / Haftalık Plan -->
+        <div class="diet-segment" role="tablist">
+          <button class="diet-segment-btn active" data-diet-pane="daily">📋 Günlük Takip</button>
+          <button class="diet-segment-btn" data-diet-pane="weekly">🗓️ Haftalık Plan</button>
+        </div>
+
+        <!-- PANE 1: GÜNLÜK TAKİP -->
+        <div id="diet-daily" class="diet-pane active">
         <div class="card diet-details-summary no-press">
           <div class="grid-3">
             <div>
@@ -269,6 +288,20 @@
             </div>
             <div class="meal-foods-list mt-2" id="meal-foods-snack"></div>
           </div>
+        </div>
+        </div><!-- /#diet-daily -->
+
+        <!-- PANE 2: HAFTALIK PLAN -->
+        <div id="diet-weekly" class="diet-pane">
+          <div class="week-nav">
+            <button id="diet-week-prev" class="date-nav-btn">&larr;</button>
+            <h3 id="diet-week-title" class="font-semibold text-base">Bu Hafta</h3>
+            <button id="diet-week-next" class="date-nav-btn">&rarr;</button>
+          </div>
+          <p class="text-xs text-muted" style="margin:0 0 10px; line-height:1.5;">
+            Günlere önceden öğün ekle; "Bugün" sekmesinde o günün planını tik atarak tüketilenlere aktarabilirsin.
+          </p>
+          <div id="weekly-diet-list"><!-- 7 gün kartı dinamik --></div>
         </div>
       </section>
 
@@ -716,6 +749,9 @@
       </div>
       
       <div class="modal-body">
+        <!-- Bağlam: hangi gün + öğün için ekleniyor -->
+        <div id="diet-modal-context" class="diet-modal-context"></div>
+
         <!-- Arama Alanı -->
         <div class="form-group">
           <input type="text" id="food-search-input" class="form-control" placeholder="Gıda ismi arayın (Örn: Yulaf, Muz)...">

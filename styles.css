@@ -1403,3 +1403,147 @@ button#theme-toggle {
 }
 
 
+
+/* ==========================================================
+   HAFTALIK DİYET PLANLAYICI
+   ========================================================== */
+
+/* Günlük / Haftalık mod geçişi (segmented control) */
+.diet-segment {
+  display: flex;
+  gap: 6px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  padding: 4px;
+  margin-bottom: 16px;
+}
+.diet-segment-btn {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 9px 8px;
+  border-radius: 9px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.diet-segment-btn.active {
+  background: var(--accent-blue);
+  color: #fff;
+}
+
+/* Pane görünürlüğü */
+.diet-pane { display: none; }
+.diet-pane.active { display: block; }
+
+/* Hafta navigasyonu */
+.week-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.week-nav h3 { margin: 0; text-align: center; flex: 1; }
+
+/* Haftalık gün kartı */
+.diet-day-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--card-border);
+  border-radius: 14px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+}
+.diet-day-card.is-today { border-color: var(--accent-blue); }
+.diet-day-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.diet-day-title { font-weight: 600; font-size: 14px; color: var(--text-primary); }
+.diet-day-kcal {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent-blue);
+  background: var(--accent-blue-light);
+  border-radius: 20px;
+  padding: 3px 9px;
+}
+.diet-day-actions { display: flex; gap: 6px; margin: 8px 0 4px; }
+.diet-day-actions button {
+  flex: 1;
+  font-size: 11px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--card-border);
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+/* Öğün satırı (haftalık) */
+.diet-meal-row {
+  border-top: 1px dashed var(--card-border);
+  padding: 8px 0 4px;
+}
+.diet-meal-row:first-of-type { border-top: none; }
+.diet-meal-row-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.diet-meal-row-head .meal-label { font-size: 12px; font-weight: 600; color: var(--text-secondary); }
+.diet-meal-add-btn {
+  border: none;
+  background: transparent;
+  color: var(--accent-blue);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 2px 6px;
+}
+.diet-plan-chip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-primary);
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  padding: 6px 10px;
+  margin-top: 6px;
+  font-size: 12px;
+}
+.diet-plan-chip .chip-name { color: var(--text-primary); font-weight: 500; }
+.diet-plan-chip .chip-meta { display: block; font-size: 10px; color: var(--text-muted); }
+.diet-plan-chip .chip-del {
+  border: none; background: none; cursor: pointer;
+  font-size: 16px; color: var(--text-muted); line-height: 1;
+}
+.diet-meal-empty { font-size: 11px; color: var(--text-muted); margin: 4px 0 0; }
+
+/* Modal bağlam etiketi */
+.diet-modal-context {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+}
+.diet-modal-context:empty { display: none; }
+
+/* Bugün: Yarının Planı önizleme kartı */
+.tomorrow-preview-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 13px;
+  padding: 4px 0;
+}
+.tomorrow-preview-row .tp-meal { color: var(--text-secondary); min-width: 92px; font-weight: 600; }
+.tomorrow-preview-row .tp-items { color: var(--text-primary); }

@@ -10,8 +10,6 @@ Bu dosya, uygulamada adım adım yapılan geliştirmeleri kaydeder. Sonradan dö
 > - `sw.js` içindeki `CACHE_NAME = 'tritrack-vX'`
 >
 > **Son sürüm:** `?v=1.12` · `tritrack-v12`
-> ⚠️ Paralel dal `ozellik/haftalik-diyet` da bağımsız olarak `1.12` kullandı — birleştirmede
-> sürüm satırı çakışırsa daha yükseğe (örn. `1.13`) çıkar.
 
 ---
 
@@ -28,6 +26,28 @@ Antrenörden gelen haftalık programı **tek seferde** ekleme. Program sekmesind
   çözülemeyen satır kırmızı işaretlenir. **"Örnek doldur"** butonu formatı gösterir.
 - **"Bu haftanın planlarını değiştir"** seçeneği (varsa o haftanın planlarını siler, sonra ekler).
 - Yeniden kullanım: `mondayOf`/`addDaysStr` (tarih), `SPORT_META` (çip rengi/ad), mevcut `.modal-overlay`.
+
+---
+
+## ✅ Faz 5 — Haftalık Diyet Planı (İleri Tarihli Planlama)
+
+Kullanıcı diyetini önceden, haftalık planlayıp "yarın ne yiyeceğim?"i tek bakışta görebilsin diye eklendi.
+
+- **Diyet sekmesine mod geçişi:** `[ 📋 Günlük Takip | 🗓️ Haftalık Plan ]` segmenti
+  ([index.html](index.html) `#view-diet`, `.diet-pane` / `.diet-segment-btn`). Yeni nav sekmesi eklenmedi.
+- **Tarih-farkında planlama:** modal artık `dietTargetDate` ile herhangi bir güne plan ekleyebiliyor
+  (`openDietModal(meal, date)`); `addSelectedFoodToState`/`saveManualFood` plan eklerken bu günü kullanır.
+  Modal başında "📅 {gün} · {öğün} planlanıyor" bağlam etiketi (`#diet-modal-context`).
+- **Haftalık görünüm:** `renderWeeklyDietView` — `renderProgramView` desenini taklit eder; 7 gün kartı,
+  öğün satırları, günlük toplam kalori rozeti, ◀ ▶ hafta navigasyonu (`dietWeekAnchor`).
+- **Hızlı doldurma:** `copyDietDay` (ertesi güne kopyala) + `applyDayToWeek` (tüm haftaya uygula, onaylı).
+- **Bugün'de önizleme:** "🌅 Yarın Ne Yiyeceğim?" kartı (`renderTomorrowPreview`) yarının öğünlerini
+  ve toplam kalorisini özetler; "🗓️ Planla" butonu doğrudan Haftalık Plan'a götürür.
+- **Tekrar azaltma:** `MEAL_META` / `MEAL_ORDER` tek kaynak; `renderTodayView` inline öğün objeleri buna bağlandı.
+
+> Not: Planlı bir öğün silinince/kopyalanınca ona bağlı tüketilen (`fd_sync_<id>`) kayıtları da
+> tutarlı şekilde yönetilir. `state.dietPlans` zaten yedekleme/geri yükleme şemasında olduğundan
+> ek migrasyon gerekmedi.
 
 ---
 
