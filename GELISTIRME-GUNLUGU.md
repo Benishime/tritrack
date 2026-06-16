@@ -9,7 +9,7 @@ Bu dosya, uygulamada adım adım yapılan geliştirmeleri kaydeder. Sonradan dö
 > - `index.html` içindeki `?v=1.X` (css + js linkleri)
 > - `sw.js` içindeki `CACHE_NAME = 'tritrack-vX'`
 >
-> **Son sürüm:** `?v=1.8` · `tritrack-v8`
+> **Son sürüm:** `?v=1.9` · `tritrack-v9`
 
 ---
 
@@ -90,6 +90,20 @@ Trend renkleri: uyku/HRV artışı yeşil (iyi), düşüş kırmızı; antrenman
 > ikiye ayrıldı. Yeniden kullanılabilir `buildLineChartSVG` yazıldı (ileride kilo/kalori
 > trendi için hazır).
 
+## ✅ AI Koç Geliştirme (dal: `ozellik/ai-koc-gelistirme`)
+
+AI Koç hem bulut (Gemini) hem yerel modda zenginleştirildi ([app.js](app.js) bölüm 9):
+
+- **Güncel model:** `gemini-1.5-flash` → **`gemini-2.5-flash`** (`GEMINI_MODEL` sabiti — buradan değiştirilir).
+- **Hazır olma (readiness) hesabı:** `computeReadiness()` — uyku süresi + uyku puanı + HRV'yi
+  (14 günlük HRV bazına göre) puanlayıp 🟢 Hazır / 🟡 Orta / 🔴 Dinlen verir.
+- **Zengin bağlam:** `gatherCoachData()` — bugünkü diyet, vücut (uyku/puan/HRV), **7 gün ortalamaları**,
+  **bu hafta vs geçen hafta yük**, son 6 antrenman, hazır olma. Hem Gemini istemine (`coachReportPrompt`)
+  hem yerel rapora (`generateLocalReport`) bu veriler işleniyor.
+- **Uyku puanı analize katıldı** (rapor + readiness).
+- **Sohbet artık veri-farkında:** `handleCoachChat` Gemini'ye sporcunun güncel durumunu da iletiyor;
+  yerel modda uyku/HRV/toparlanma sorularına readiness'e göre cevap veriyor.
+
 ---
 
 ## 🔜 Bekleyen / Gelecek Fikirler
@@ -99,7 +113,7 @@ Trend renkleri: uyku/HRV artışı yeşil (iyi), düşüş kırmızı; antrenman
 - [ ] [ornek-antrenman.gpx](ornek-antrenman.gpx) yayın paketinden silinmeli.
 - [ ] Kilo trendi / kalori trendi grafikleri (`buildLineChartSVG` hazır).
 - [ ] PWA cilası: bildirimler, ikon/offline iyileştirme, Play Store paketleme (Bubblewrap/PWABuilder).
-- [ ] AI Koç: güncel model + uyku puanını da analiz raporuna katma.
+- [x] ~~AI Koç: güncel model + uyku puanını da analiz raporuna katma.~~ (tamamlandı)
 
 ## 🗂️ Dosya Haritası (kısa)
 

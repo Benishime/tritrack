@@ -1598,9 +1598,113 @@ function appendChatMessage(sender, text) {
   container.scrollTop = container.scrollHeight;
 }
 
+// Güncel Gemini modeli (gerekirse buradan değiştir)
+const GEMINI_MODEL = 'gemini-2.5-flash';
+
+function fmtNum(v, dec) {
+  if (v == null) return '-';
+  const k = Math.pow(10, dec);
+  return Math.round(v * k) / k;
+}
+
+// Belirli bir haftanın (Pazartesi başlangıçlı) toplam antrenman dakikası
+function weekMinutes(monday) {
+  const end = addDaysStr(monday, 6);
+  return Math.round(state.workouts
+    .filter(w => w.date >= monday && w.date <= end)
+    .reduce((a, w) => a + (w.duration || 0) / 60, 0));
+}
+
+// Bugünün "hazır olma" durumu: uyku süresi + uyku puanı + HRV (14 günlük baz ile)
+function computeReadiness() {
+  const b = state.holisticLogs[currentDateStr] || {};
+  const sleep = b.sleep, score = b.sleepScore, hrv = b.hrv;
+  const hrvBase = avgOf(holisticValues('hrv', 1, 14));
+  let pts = 0, max = 0;
+  const reasons = [];
+
+  if (typeof sleep === 'number') {
+    max++;
+    if (sleep >= 7.5) pts++;
+    else if (sleep >= 6.5) { pts += 0.5; reasons.push('uyku biraz kısa'); }
+    else reasons.push('uyku yetersiz');
+  }
+  if (typeof score === 'number') {
+    max++;
+    if (score >= 80) pts++;
+    else if (score >= 65) { pts += 0.5; reasons.push('uyku kalitesi orta'); }
+    else reasons.push('uyku kalitesi düşük');
+  }
+  if (typeof hrv === 'number') {
+    max++;
+    if (hrvBase) {
+      if (hrv >= hrvBase * 0.95) pts++;
+      else if (hrv >= hrvBase * 0.85) { pts += 0.5; reasons.push('HRV ortalamanın altında'); }
+      else reasons.push('HRV belirgin düşük');
+    } else if (hrv >= 55) pts++;
+    else { pts += 0.5; reasons.push('HRV düşük'); }
+  }
+
+  if (max === 0) return null;
+  const ratio = pts / max;
+  if (ratio >= 0.8) return { label: 'Hazır', emoji: '🟢', ratio, reasons };
+  if (ratio >= 0.5) return { label: 'Orta', emoji: '🟡', ratio, reasons };
+  return { label: 'Dinlen', emoji: '🔴', ratio, reasons };
+}
+
+// Antrenör için tüm bağlamı topla
+function gatherCoachData() {
+  const todayDiet = state.diet.filter(f => f.date === currentDateStr);
+  const diet = { cal: 0, p: 0, c: 0, f: 0 };
+  todayDiet.forEach(f => { diet.cal += f.calories; diet.p += f.protein; diet.c += f.carbs; diet.f += f.fat; });
+
+  const thisMon = mondayOf(currentDateStr);
+  return {
+    diet,
+    body: state.holisticLogs[currentDateStr] || {},
+    avg7: {
+      sleep: avgOf(holisticValues('sleep', 0, 6)),
+      score: avgOf(holisticValues('sleepScore', 0, 6)),
+      hrv: avgOf(holisticValues('hrv', 0, 6))
+    },
+    load: { thisWeek: weekMinutes(thisMon), lastWeek: weekMinutes(addDaysStr(thisMon, -7)) },
+    recent: state.workouts.slice().sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 6),
+    readiness: computeReadiness()
+  };
+}
+
+// Gemini için zengin rapor istem metni
+function coachReportPrompt(d) {
+  const p = state.profile;
+  const r = d.readiness;
+  const recentTxt = d.recent.length
+    ? d.recent.map(w => `- ${w.date} · ${(SPORT_META[w.sport] || { name: w.sport }).name} · ${Math.round((w.duration || 0) / 60)}dk · ${w.distance || 0}${w.sport === 'swim' ? 'm' : 'km'} · RPE ${w.rpe || '-'}/10${w.notes ? ` · not: ${w.notes}` : ''}`).join('\n')
+    : 'Son antrenman kaydı yok.';
+
+  return `Sen triatlet ve koşucular için profesyonel bir yapay zeka antrenörüsün. Türkçe, samimi ama net konuş.
+
+SPORCU: ${p.name}, ${p.weight} kg
+HEDEF: ${p.targetDailyCalories} kcal/gün (P:${p.targetMacros.protein} C:${p.targetMacros.carbs} Y:${p.targetMacros.fat} g)
+
+BUGÜN DİYET: ${Math.round(d.diet.cal)} kcal · P:${Math.round(d.diet.p)}g C:${Math.round(d.diet.c)}g Y:${Math.round(d.diet.f)}g
+BUGÜN VÜCUT: uyku ${d.body.sleep != null ? d.body.sleep : '-'} saat, uyku puanı ${d.body.sleepScore != null ? d.body.sleepScore : '-'}/100, HRV ${d.body.hrv != null ? d.body.hrv : '-'} ms
+7 GÜN ORT.: uyku ${fmtNum(d.avg7.sleep, 1)} saat, uyku puanı ${fmtNum(d.avg7.score, 0)}, HRV ${fmtNum(d.avg7.hrv, 0)} ms
+HAFTALIK YÜK: bu hafta ${d.load.thisWeek} dk, geçen hafta ${d.load.lastWeek} dk
+HAZIR OLMA (hesaplanan): ${r ? `${r.label}${r.reasons.length ? ' (' + r.reasons.join(', ') + ')' : ''}` : 'veri yetersiz'}
+
+SON ANTRENMANLAR:
+${recentTxt}
+
+Bu verilere göre kısa, maddeli bir rapor yaz:
+1. Beslenme: hedeflerle uyum (özellikle protein ve karbonhidrat yeterli mi?).
+2. Toparlanma: uyku süresi+puanı ve HRV'ye göre hazır olma, aşırı antrenman riski.
+3. Bugün/yarın önerisi: haftalık yük değişimi ve son RPE'lere göre yoğunluğu artır/azalt.
+Gereksiz uzatma; doğrudan, uygulanabilir öneriler ver.`;
+}
+
 function generateCoachReport() {
   const container = document.getElementById('ai-chat-output');
-  
+
   const loader = document.createElement('div');
   loader.className = 'ai-message message-bot loader-msg';
   loader.style.padding = '8px 12px';
@@ -1608,69 +1712,24 @@ function generateCoachReport() {
   container.appendChild(loader);
   container.scrollTop = container.scrollHeight;
 
-  const last7DaysWorkouts = state.workouts.slice(-5);
-  const todayDiet = state.diet.filter(f => f.date === currentDateStr);
-  const todayBody = state.holisticLogs[currentDateStr] || {};
-
-  let dietCal = 0, dietP = 0, dietC = 0, dietF = 0;
-  todayDiet.forEach(f => {
-    dietCal += f.calories;
-    dietP += f.protein;
-    dietC += f.carbs;
-    dietF += f.fat;
-  });
-
-  let workoutSummary = last7DaysWorkouts.map(w => {
-    return `- Tarih: ${w.date}, Branş: ${w.sport.toUpperCase()}, Süre: ${Math.round(w.duration/60)}dk, Mesafe: ${w.distance || 0} ${w.sport === 'swim' ? 'm' : 'km'}, RPE (Zorluk): ${w.rpe}/10, Notlar: ${w.notes || 'Yok'}`;
-  }).join('\n');
-
-  if (last7DaysWorkouts.length === 0) workoutSummary = "Son zamanlarda kaydedilmiş antrenman bulunmuyor.";
-
-  const prompt = `Sen triatletler ve koşucular için özelleşmiş, profesyonel bir yapay zeka spor antrenörüsün.
-Kullanıcının adı: ${state.profile.name}
-Kilosu: ${state.profile.weight} kg
-Günlük kalori hedefi: ${state.profile.targetDailyCalories} kcal (Hedef Makrolar: P:${state.profile.targetMacros.protein}g, C:${state.profile.targetMacros.carbs}g, Y:${state.profile.targetMacros.fat}g)
-
-Bugünkü Diyet Bilgisi:
-- Alınan Kalori: ${Math.round(dietCal)} kcal
-- Alınan Protein: ${Math.round(dietP)}g, Karbonhidrat: ${Math.round(dietC)}g, Yağ: ${Math.round(dietF)}g
-
-Bugünkü Fizyolojik Durum:
-- Uyku Süresi: ${todayBody.sleep || 'Girilmedi'} saat
-- HRV (Kalp Hızı Değişkenliği): ${todayBody.hrv || 'Girilmedi'} ms
-
-Son Kaydedilen Antrenmanlar (Yük Analizi):
-${workoutSummary}
-
-Lütfen yukarıdaki verilere dayanarak kullanıcıya Türkçe, samimi ama profesyonel, doğrudan aksiyon alabileceği bir gelişim ve toparlanma raporu yaz. Raporda şunlara değin:
-1. Diyet ve beslenmenin hedeflerle uyumu (özellikle protein ve karbonhidrat alımı yeterli mi?).
-2. Uyku ve HRV durumuna göre toparlanma (recovery) durumu ve aşırı antrenman (overtraining) riski.
-3. Bir sonraki antrenmanı için tavsiye (RPE değerlerine bakarak yoğunluğu azaltmalı veya artırmalı mı?).
-Lütfen kısa ve öz, maddeler halinde anlaşılır yaz.`;
-
+  const data = gatherCoachData();
   const apiKey = state.profile.geminiApiKey;
 
   if (apiKey) {
-    callGeminiAPI(apiKey, prompt)
-      .then(reply => {
-        loader.remove();
-        appendChatMessage('bot', reply);
-      })
+    callGeminiAPI(apiKey, coachReportPrompt(data))
+      .then(reply => { loader.remove(); appendChatMessage('bot', reply); })
       .catch(err => {
         console.error("Gemini API hatası, yerel moda geçiliyor", err);
         loader.remove();
-        generateLocalReport(dietCal, dietP, todayBody, last7DaysWorkouts, "Gemini API bağlantısı kurulamadı (Karanlık Modda çalışılıyor). İşte yerel koç analiziniz:\n\n");
+        generateLocalReport(data, "Gemini bağlantısı kurulamadı, yerel analiz:\n\n");
       });
   } else {
-    setTimeout(() => {
-      loader.remove();
-      generateLocalReport(dietCal, dietP, todayBody, last7DaysWorkouts);
-    }, 1500);
+    setTimeout(() => { loader.remove(); generateLocalReport(data); }, 1200);
   }
 }
 
 async function callGeminiAPI(apiKey, promptText) {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`;
   const response = await fetch(url, {
     method: 'POST',
     headers: {
@@ -1698,61 +1757,63 @@ async function callGeminiAPI(apiKey, promptText) {
   }
 }
 
-function generateLocalReport(dietCal, dietP, todayBody, lastWorkouts, prefixText = "") {
+function generateLocalReport(d, prefixText = "") {
+  const p = state.profile;
   let report = prefixText || "";
-  report += `### 🤖 TriTrack Yapay Zeka Koç Raporu (${state.profile.name})\n\n`;
+  report += `### 🤖 TriTrack Koç Raporu — ${p.name}\n\n`;
 
-  report += `**1. Beslenme ve Diyet Durumu:**\n`;
-  const calDeficit = state.profile.targetDailyCalories - dietCal;
-  if (dietCal === 0) {
-    report += `- Bugün henüz yemek girişi yapmadınız. Antrenman performansınız için besinlerinizi kaydetmeyi unutmayın.\n`;
+  // 0. Hazır olma durumu
+  if (d.readiness) {
+    report += `**${d.readiness.emoji} Bugünkü Hazır Olma: ${d.readiness.label}**\n`;
+    if (d.readiness.reasons.length) report += `- Dikkat: ${d.readiness.reasons.join(', ')}.\n`;
+    report += `\n`;
+  }
+
+  // 1. Beslenme
+  report += `**1. Beslenme:**\n`;
+  const calDef = p.targetDailyCalories - d.diet.cal;
+  if (d.diet.cal === 0) {
+    report += `- Bugün besin girişi yok. Performans için öğünlerini kaydet.\n`;
   } else {
-    if (Math.abs(calDeficit) < 200) {
-      report += `- Enerji Dengesi: Mükemmel! Kalori hedefinize tam ulaştınız.\n`;
-    } else if (calDeficit > 200) {
-      report += `- Enerji Dengesi: Hedefinizin ${Math.round(calDeficit)} kcal altındasınız. Dayanıklılık antrenmanlarında yıkımı önlemek için karbonhidrat alımını artırabilirsiniz.\n`;
-    } else {
-      report += `- Enerji Dengesi: Hedefinizin ${Math.round(Math.abs(calDeficit))} kcal üzerindesiniz. Kilo kontrolü yapıyorsanız porsiyonlara dikkat.\n`;
-    }
+    if (Math.abs(calDef) < 200) report += `- Enerji dengesi mükemmel (${Math.round(d.diet.cal)} kcal).\n`;
+    else if (calDef > 200) report += `- Hedefin ${Math.round(calDef)} kcal altındasın. Dayanıklılık için karbonhidratı artır.\n`;
+    else report += `- Hedefin ${Math.round(-calDef)} kcal üstündesin. Kilo kontrolünde porsiyona dikkat.\n`;
 
-    if (dietP < state.profile.targetMacros.protein * 0.8) {
-      report += `- Protein Alımı: Yetersiz (${Math.round(dietP)}g / Hedef: ${state.profile.targetMacros.protein}g). Kas toparlanması (recovery) için sonraki öğünde tavuk, yumurta veya whey protein ekleyin.\n`;
-    } else {
-      report += `- Protein Alımı: Harika! Kas onarımı için yeterli miktarda protein aldınız.\n`;
-    }
+    if (d.diet.p < p.targetMacros.protein * 0.8) report += `- Protein yetersiz (${Math.round(d.diet.p)}/${p.targetMacros.protein}g). Sonraki öğüne tavuk/yumurta/whey ekle.\n`;
+    else report += `- Protein yeterli (${Math.round(d.diet.p)}g) 👍\n`;
   }
 
-  report += `\n**2. Toparlanma ve Fizyoloji:**\n`;
-  const sleep = todayBody.sleep;
-  const hrv = todayBody.hrv;
-
-  if (sleep) {
-    if (sleep < 7) {
-      report += `- Uyku: Yetersiz (${sleep} saat). Sporcularda hormon dengesi ve kas onarımı için en az 8 saat uyku önerilir.\n`;
-    } else {
-      report += `- Uyku: Çok iyi (${sleep} saat). Vücudunuz kendini yenilemek için yeterli süre dinlenmiş.\n`;
-    }
+  // 2. Toparlanma
+  report += `\n**2. Toparlanma:**\n`;
+  const b = d.body;
+  if (typeof b.sleep === 'number') {
+    report += `- Uyku: ${b.sleep} saat${b.sleep < 7 ? ' — kısa, 8 saate çıkmaya çalış.' : ' 👍'}${typeof b.sleepScore === 'number' ? ` (puan ${b.sleepScore}/100)` : ''}\n`;
+  } else if (typeof b.sleepScore === 'number') {
+    report += `- Uyku puanı: ${b.sleepScore}/100. Süreyi de girersen analiz güçlenir.\n`;
   } else {
-    report += `- Uyku verisi girilmedi. İlerleyişinizi analiz edebilmem için uyku sürenizi girmenizi öneririm.\n`;
+    report += `- Uyku verisi girilmedi.\n`;
+  }
+  if (typeof b.hrv === 'number') {
+    const base = avgOf(holisticValues('hrv', 1, 14));
+    if (base && b.hrv < base * 0.9) report += `- HRV ${b.hrv} ms — ortalamanın (${Math.round(base)}) altında, yorgunluk işareti.\n`;
+    else report += `- HRV ${b.hrv} ms — stabil, yüklere hazır.\n`;
   }
 
-  if (hrv) {
-    if (hrv < 55) {
-      report += `- HRV: Düşük (${hrv} ms). Otonom sinir sisteminizde yorgunluk belirtileri var. Bugün yüksek şiddetli antrenmanlardan kaçınabilirsiniz.\n`;
-    } else {
-      report += `- HRV: Stabil (${hrv} ms). Kardiyovasküler sisteminiz yoğun yüklere hazır.\n`;
-    }
-  }
-
+  // 3. Antrenman önerisi
   report += `\n**3. Antrenman Önerisi:**\n`;
-  const avgRpe = lastWorkouts.length > 0 ? (lastWorkouts.reduce((acc, curr) => acc + curr.rpe, 0) / lastWorkouts.length) : 5;
+  const avgRpe = d.recent.length ? d.recent.reduce((a, w) => a + (w.rpe || 0), 0) / d.recent.length : 0;
+  const loadDelta = d.load.lastWeek ? Math.round((d.load.thisWeek - d.load.lastWeek) / d.load.lastWeek * 100) : null;
 
-  if (hrv && hrv < 50 && sleep && sleep < 6.5) {
-    report += `⚠️ **DİKKAT**: Hem uyku süreniz hem de HRV değeriniz düşük. Bugün antrenman planınızda yoğun bir çalışma varsa, bunu **aktif dinlenme (kolay sürüş/yürüyüş)** ile değiştirmenizi tavsiye ederim. Sakatlanma riskiniz yüksek.`;
+  if (d.readiness && d.readiness.label === 'Dinlen') {
+    report += `🔴 Toparlanman bugün düşük. Yoğun çalışma yerine aktif dinlenme (kolay yürüyüş/sürüş) öneririm.\n`;
   } else if (avgRpe > 7) {
-    report += `💪 Son antrenmanlarınızın zorluk ortalaması (RPE: ${Math.round(avgRpe * 10)/10}/10) yüksek seyrediyor. Aşırı yorulmayı önlemek için bu haftaki bir antrenmanı tamamen esneme ve stabilite (fitness-mobility) çalışmasına ayırın.`;
+    report += `💪 Son antrenman zorluğun yüksek (ort. RPE ${Math.round(avgRpe * 10) / 10}). Bir antrenmanı mobilite/esnemeye ayır.\n`;
   } else {
-    report += `🚀 İlerleyişiniz harika gidiyor! Planlanan programınıza sadık kalın. Yarınki koşu çalışmanızda tempoyu planlanan hedeflerde tutmaya çalışın.`;
+    report += `🚀 Durum iyi görünüyor. Planına sadık kal.\n`;
+  }
+  if (loadDelta !== null) {
+    if (loadDelta > 30) report += `- Haftalık yük geçen haftaya göre %${loadDelta} arttı — ani artış sakatlık riski, kademeli ilerle.\n`;
+    else if (loadDelta < -30) report += `- Haftalık yük %${Math.abs(loadDelta)} azaldı — dinlenme haftasıysa harika.\n`;
   }
 
   appendChatMessage('bot', report);
@@ -1772,12 +1833,15 @@ function handleCoachChat(userText) {
   const apiKey = state.profile.geminiApiKey;
 
   if (apiKey) {
-    const systemPrompt = `Sen kullanıcının triatlon ve koşu antrenörüsün. Adı: ${state.profile.name}.
-Sadece spor, antrenman, triatlon branşları (yüzme, bisiklet, koşu), sporcu beslenmesi, diyet, uyku ve recovery konularına cevap ver.
-Diğer alakasız sorulara kibarca sadece spor antrenörü olduğunu belirterek yanıt verme. Türkçe konuş. Yanıtın kısa, motive edici ve net olsun.`;
+    const d = gatherCoachData();
+    const ctx = `Sporcunun güncel durumu — Bugün: uyku ${d.body.sleep != null ? d.body.sleep + 's' : '-'}, uyku puanı ${d.body.sleepScore != null ? d.body.sleepScore : '-'}, HRV ${d.body.hrv != null ? d.body.hrv + 'ms' : '-'}, diyet ${Math.round(d.diet.cal)}kcal/P${Math.round(d.diet.p)}g. Bu hafta yük ${d.load.thisWeek}dk (geçen hafta ${d.load.lastWeek}dk). Hazır olma: ${d.readiness ? d.readiness.label : '-'}.`;
 
-    const chatHistoryContext = `Sistem Talimatı: ${systemPrompt}\n\nKullanıcı Sorusu: ${userText}\nCevap:`;
-    
+    const systemPrompt = `Sen ${state.profile.name} adlı sporcunun triatlon ve koşu antrenörüsün.
+Sadece spor, antrenman (yüzme/bisiklet/koşu/güç), sporcu beslenmesi, diyet, uyku ve toparlanma konularına cevap ver.
+Alakasız sorularda kibarca sadece antrenör olduğunu belirt. Türkçe konuş; kısa, motive edici ve net ol. Mümkünse sporcunun güncel verisine atıfta bulun.`;
+
+    const chatHistoryContext = `${systemPrompt}\n\n${ctx}\n\nKullanıcı Sorusu: ${userText}\nCevap:`;
+
     callGeminiAPI(apiKey, chatHistoryContext)
       .then(reply => {
         loader.remove();
@@ -1802,8 +1866,13 @@ Diğer alakasız sorulara kibarca sadece spor antrenörü olduğunu belirterek y
         reply = "Yüzmede teknik çok önemlidir. Mesafe yapmaktan ziyade kulaç verimliliğini (SWOLF) artırmaya ve nefes kontrol egzersizlerine odaklanmalısınız.";
       } else if (q.includes("ne yemeliyim") || q.includes("yemek") || q.includes("beslenme") || q.includes("diyet")) {
         reply = "Yoğun antrenman günlerinden önce yulaf, makarna, pirinç gibi kompleks karbonhidratlar tüketin. Antrenman sonrasında ise toparlanmayı hızlandırmak için 3:1 oranında karbonhidrat-protein öğünü alın.";
+      } else if (q.includes("uyku") || q.includes("hrv") || q.includes("toparlan") || q.includes("dinlen") || q.includes("yorgun") || q.includes("hazır")) {
+        const rd = computeReadiness();
+        reply = rd
+          ? `Bugünkü hazır olma durumun: ${rd.emoji} ${rd.label}. ${rd.reasons.length ? 'Dikkat: ' + rd.reasons.join(', ') + '. ' : ''}HRV ortalamanın altındaysa veya uyku puanın düşükse o gün yoğunluğu azalt, aktif dinlenme yap.`
+          : "Toparlanmayı takip için her sabah uyku süreni, uyku puanını ve HRV'ni gir. Bu değerler düşükse o gün hafif antrenman yap.";
       }
-      
+
       appendChatMessage('bot', reply);
     }, 1000);
   }
