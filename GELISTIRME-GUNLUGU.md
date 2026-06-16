@@ -9,7 +9,7 @@ Bu dosya, uygulamada adım adım yapılan geliştirmeleri kaydeder. Sonradan dö
 > - `index.html` içindeki `?v=1.X` (css + js linkleri)
 > - `sw.js` içindeki `CACHE_NAME = 'tritrack-vX'`
 >
-> **Son sürüm:** `?v=1.9` · `tritrack-v9`
+> **Son sürüm:** `?v=1.10` · `tritrack-v10`
 
 ---
 
@@ -103,6 +103,21 @@ AI Koç hem bulut (Gemini) hem yerel modda zenginleştirildi ([app.js](app.js) b
 - **Uyku puanı analize katıldı** (rapor + readiness).
 - **Sohbet artık veri-farkında:** `handleCoachChat` Gemini'ye sporcunun güncel durumunu da iletiyor;
   yerel modda uyku/HRV/toparlanma sorularına readiness'e göre cevap veriyor.
+
+## ✅ Antrenman Düzenleme + Diyet Çift-Görünüm Düzeltmesi (dal: `ozellik/antrenman-duzenle-diyet-fix`)
+
+**1. Antrenman düzenleme akışı** ([app.js](app.js) bölüm 7): Önce sadece silinebiliyordu.
+- "Yapılan Antrenmanlar" kartına **✏️ Düzenle** butonu eklendi.
+- `startEditWorkout` → Kaydet sekmesine geçer, branş sekmesini seçer, `prefillWorkoutForm` ile
+  tüm alanları (mesafe, süre, nabız, güç/kadans, RPE, havuz, egzersizler, not) doldurur.
+- `editingWorkoutId` global durumu; `saveWorkoutAndRoute` bu set'liyse **yeni eklemek yerine günceller**
+  (orijinal tarih + importKey korunur, plan eşleştirmesi atlanır). `resetWorkoutForms` modu sıfırlar.
+- Kaydet butonu düzenlemede "✓ Antrenmanı Güncelle" olur.
+
+**2. Diyet planı çift görünüm bug'ı** ([app.js](app.js) `renderDietView`): Tamamlanan plan hem "📋 Diyet Planı"
+hem "🍽 Tüketilen" bölümünde çıkıyordu. Çözüm: "Tüketilen" listesi artık `fd_sync_` ile başlayan
+(plandan otomatik gelen) öğeleri **göstermiyor** — plan satırı zaten işaretli görünüyor, kalori toplamı
+yine doğru (toplamlar `state.diet`'ten okunuyor).
 
 ---
 

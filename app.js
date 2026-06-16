@@ -31,6 +31,9 @@ function formatDate(dateObj) {
 // Bugünün Tarih Değişkeni (State'deki geçerli gün)
 let currentDateStr = formatDate(new Date());
 
+// Düzenlenmekte olan antrenmanın id'si (null = yeni kayıt modu)
+let editingWorkoutId = null;
+
 // Verileri LocalStorage'dan Çek
 function loadState() {
   const savedState = localStorage.getItem('tritrack_state');
@@ -459,13 +462,18 @@ function renderTodayView() {
             <span class="badge badge-${workout.sport}">${sportIcons[workout.sport]} ${sportNames[workout.sport]}</span>
             <span class="text-xs text-muted">${durationStr} | RPE: ${workout.rpe}/10</span>
           </div>
-          <button class="delete-workout-btn modal-close" style="font-size:18px; border:none; background:none; cursor:pointer;" data-id="${workout.id}">&times;</button>
+          <div style="display:flex; align-items:center; gap:4px;">
+            <button class="edit-workout-btn" style="font-size:15px; border:none; background:none; cursor:pointer; padding:2px 4px;" title="Düzenle" data-id="${workout.id}">✏️</button>
+            <button class="delete-workout-btn modal-close" style="font-size:18px; border:none; background:none; cursor:pointer;" title="Sil" data-id="${workout.id}">&times;</button>
+          </div>
         </div>
         <div>
           <p class="text-sm text-secondary">${detailsHTML}</p>
           ${workout.notes ? `<p class="text-xs text-muted mt-2" style="font-style:italic;">"${workout.notes}"</p>` : ''}
         </div>
       `;
+
+      card.querySelector('.edit-workout-btn').addEventListener('click', () => startEditWorkout(workout));
 
       card.querySelector('.delete-workout-btn').addEventListener('click', () => {
         if(confirm("Bu antrenman kaydını silmek istediğinize emin misiniz?")) {
@@ -1103,7 +1111,9 @@ function renderDietView() {
     const mealContainer = document.getElementById(`meal-foods-${meal}`);
     
     // Tüketilenler
-    const mealFoods = state.diet.filter(f => f.date === currentDateStr && f.meal === meal);
+    // Plandan otomatik senkronlanan (fd_sync_) öğeler "Tüketilen" listesinde TEKRAR gösterilmez;
+    // zaten yukarıdaki "Diyet Planı" satırında işaretli görünüyorlar (kalori toplamına yine dahil).
+    const mealFoods = state.diet.filter(f => f.date === currentDateStr && f.meal === meal && !f.id.startsWith('fd_sync_'));
     // Planlananlar (Yeni Özellik)
     const mealPlans = state.dietPlans.filter(f => f.date === currentDateStr && f.meal === meal);
 
@@ -1437,6 +1447,22 @@ function initWorkoutLogView() {
 }
 
 function saveWorkoutAndRoute(workout) {
+  // Düzenleme modu: mevcut kaydı güncelle (plan eşleştirmesi yapma)
+  if (editingWorkoutId) {
+    const idx = state.workouts.findIndex(w => w.id === editingWorkoutId);
+    if (idx !== -1) {
+      workout.id = editingWorkoutId;
+      workout.date = state.workouts[idx].date; // orijinal tarihi koru
+      if (state.workouts[idx].importKey) workout.importKey = state.workouts[idx].importKey;
+      state.workouts[idx] = workout;
+    }
+    editingWorkoutId = null;
+    saveState();
+    showToast("Antrenman güncellendi!");
+    document.querySelector('.bottom-nav [data-view="today"]').click();
+    return;
+  }
+
   state.workouts.push(workout);
 
   const matchingPlan = state.plans.find(p => p.date === currentDateStr && p.sport === workout.sport && !p.completed);
@@ -1450,12 +1476,31 @@ function saveWorkoutAndRoute(workout) {
   document.querySelector('.bottom-nav [data-view="today"]').click();
 }
 
+const WORKOUT_SUBMIT_LABELS = {
+  run: 'Koşu Antrenmanını Kaydet',
+  bike: 'Bisiklet Antrenmanını Kaydet',
+  swim: 'Yüzme Antrenmanını Kaydet',
+  fitness: 'Fitness Antrenmanını Kaydet'
+};
+
+function workoutSubmitBtn(sport) {
+  return document.querySelector(`#form-log-${sport} button[type="submit"]`);
+}
+
 function resetWorkoutForms() {
+  editingWorkoutId = null; // düzenleme modundan çık
+
   document.getElementById('form-log-run').reset();
   document.getElementById('form-log-bike').reset();
   document.getElementById('form-log-swim').reset();
   document.getElementById('form-log-fitness').reset();
-  
+
+  // RPE göstergelerini ve kaydet butonlarını varsayılana döndür
+  Object.keys(WORKOUT_SUBMIT_LABELS).forEach(sport => {
+    const btn = workoutSubmitBtn(sport);
+    if (btn) btn.innerText = WORKOUT_SUBMIT_LABELS[sport];
+  });
+
   const container = document.getElementById('fitness-exercises-container');
   container.innerHTML = `
     <div class="exercise-row card" style="padding:12px; margin-bottom:12px; background-color: var(--bg-secondary);">
@@ -1479,6 +1524,89 @@ function resetWorkoutForms() {
       </div>
     </div>
   `;
+}
+
+// Tek bir egzersiz satırı oluştur (düzenleme/ekleme için, mevcut değerlerle doldurulabilir)
+function buildExerciseRow(ex) {
+  const e = ex || {};
+  const safeName = (e.name || '').replace(/"/g, '&quot;');
+  const row = document.createElement('div');
+  row.className = 'exercise-row card';
+  row.style.padding = '12px';
+  row.style.marginBottom = '12px';
+  row.style.backgroundColor = 'var(--bg-secondary)';
+  row.innerHTML = `
+    <div class="form-group">
+      <label class="form-label">Hareket Adı</label>
+      <input type="text" class="form-control exercise-name" placeholder="Egzersiz adı" value="${safeName}" required>
+    </div>
+    <div class="grid-3">
+      <div class="form-group"><label class="form-label">Set</label><input type="number" class="form-control exercise-sets" min="1" value="${e.sets || 3}" required></div>
+      <div class="form-group"><label class="form-label">Tekrar</label><input type="number" class="form-control exercise-reps" min="1" value="${e.reps || 10}" required></div>
+      <div class="form-group"><label class="form-label">Kilo (kg)</label><input type="number" class="form-control exercise-weight" min="0" step="0.5" value="${e.weight != null ? e.weight : 20}" required></div>
+    </div>
+    <button type="button" class="btn btn-ghost btn-remove-ex-row btn-full mt-2" style="padding:6px; border-radius:6px; font-size:12px;">Satırı Sil</button>
+  `;
+  row.querySelector('.btn-remove-ex-row').addEventListener('click', () => row.remove());
+  return row;
+}
+
+// Kaydet formunu mevcut bir antrenmanın değerleriyle doldur
+function prefillWorkoutForm(w) {
+  const setDur = (prefix) => {
+    document.getElementById(`${prefix}-duration-h`).value = Math.floor((w.duration || 0) / 3600);
+    document.getElementById(`${prefix}-duration-m`).value = Math.floor(((w.duration || 0) % 3600) / 60);
+    document.getElementById(`${prefix}-duration-s`).value = (w.duration || 0) % 60;
+  };
+  const setRpe = (prefix, def) => {
+    const v = (w.rpe != null) ? w.rpe : def;
+    document.getElementById(`${prefix}-rpe`).value = v;
+    document.getElementById(`${prefix}-rpe-val`).innerText = v;
+  };
+
+  if (w.sport === 'run') {
+    document.getElementById('run-distance').value = (w.distance != null) ? w.distance : '';
+    setDur('run');
+    document.getElementById('run-hr').value = (w.hr != null) ? w.hr : '';
+    setRpe('run', 6);
+    document.getElementById('run-notes').value = w.notes || '';
+  } else if (w.sport === 'bike') {
+    document.getElementById('bike-distance').value = (w.distance != null) ? w.distance : '';
+    setDur('bike');
+    document.getElementById('bike-power').value = (w.power != null) ? w.power : '';
+    document.getElementById('bike-cadence').value = (w.cadence != null) ? w.cadence : '';
+    setRpe('bike', 5);
+    document.getElementById('bike-notes').value = w.notes || '';
+  } else if (w.sport === 'swim') {
+    document.getElementById('swim-distance').value = (w.distance != null) ? w.distance : '';
+    if (w.poolLength) document.getElementById('swim-pool').value = w.poolLength;
+    setDur('swim');
+    setRpe('swim', 7);
+    document.getElementById('swim-notes').value = w.notes || '';
+  } else if (w.sport === 'fitness') {
+    setRpe('fitness', 6);
+    document.getElementById('fitness-notes').value = w.notes || '';
+    const container = document.getElementById('fitness-exercises-container');
+    if (w.exercises && w.exercises.length) {
+      container.innerHTML = '';
+      w.exercises.forEach(ex => container.appendChild(buildExerciseRow(ex)));
+    }
+  }
+}
+
+// Bir antrenmanı düzenlemeye başla: Kaydet sekmesine geçip formu doldur
+function startEditWorkout(w) {
+  document.querySelector('.bottom-nav [data-view="log"]').click(); // resetWorkoutForms çalışır (editingWorkoutId=null)
+  const tab = document.querySelector(`.sport-tab-btn[data-sport="${w.sport}"]`);
+  if (tab) tab.click();
+
+  prefillWorkoutForm(w);
+  editingWorkoutId = w.id; // reset'ten SONRA ayarla
+
+  const btn = workoutSubmitBtn(w.sport);
+  if (btn) btn.innerText = '✓ Antrenmanı Güncelle';
+
+  showToast('Düzenleme modu — kaydedince güncellenecek.');
 }
 
 // ==========================================
