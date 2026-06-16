@@ -9,7 +9,30 @@ Bu dosya, uygulamada adım adım yapılan geliştirmeleri kaydeder. Sonradan dö
 > - `index.html` içindeki `?v=1.X` (css + js linkleri)
 > - `sw.js` içindeki `CACHE_NAME = 'tritrack-vX'`
 >
-> **Son sürüm:** `?v=1.18` · `tritrack-v18`
+> **Son sürüm:** `?v=1.20` · `tritrack-v20`
+
+---
+
+## ✅ Strava Canlı Senkron (kişisel, otomatik) — Huawei → Strava → TriTrack
+
+Antrenmanları elle girmeyi bitirmek için canlı Strava senkronu eklendi (kapsam: **sadece sahip / tek sporcu**).
+Yol haritası ve gerekçeler `bu-projeyi-incele...` plan dosyasında; kurulum **[STRAVA-KURULUM.md](STRAVA-KURULUM.md)**.
+
+- **Neden proxy?** Strava `client_secret` tarayıcıda tutulamaz + Strava API tarayıcıdan CORS'a kapalı.
+  Çözüm: küçük ücretsiz **Cloudflare Worker** (`strava-proxy/worker.js` + `wrangler.toml`): `/login`, `/callback`, `/sync`.
+- **PWA tarafı** ([app.js](app.js) "11.B STRAVA CANLI SENKRONU"): `connectStrava` (OAuth'a yönlendir),
+  `handleStravaRedirect` (dönüşte `#strava_token`'ı yakalayıp `state.profile.strava`'ya yaz), `syncStrava`
+  (Worker `/sync` → aktiviteler), `mapStravaActivity` (Strava `type`→branş, mesafe/süre/nabız/güç),
+  `renderStravaStatus`. Profil'e "Strava Canlı Senkron" kartı + Proxy URL alanı.
+- **Tekrar engelleme:** `addImportedWorkout` artık `stravaId` ile de dedup yapıyor; içe aktarılan kayıtlara
+  `source:'strava'` işaretleniyor.
+- **Strava API sözleşmesi:** Strava kaynaklı **ham** antrenman detayları AI'ya gönderilmiyor —
+  `gatherCoachData.recent` artık `source==='strava'` kayıtları **dışlıyor** (haftalık kaba toplam gidebilir).
+- **Huawei:** Huawei Health → native Strava bağlantısı (veya GPX/TCX dışa aktar) ile veri Strava'ya, oradan buraya.
+  Import kartındaki yardım metni Huawei adımlarıyla güncellendi.
+
+> Çalışması için kullanıcı bir kez Strava API uygulaması açıp Worker'ı yayınlar ve Proxy URL'sini girer.
+> `state.profile.strava` opsiyonel olduğundan migrasyon gerekmedi (yedeklemede korunur; refresh_token hassastır).
 
 ---
 

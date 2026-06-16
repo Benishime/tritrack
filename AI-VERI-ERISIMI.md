@@ -96,8 +96,8 @@ sen onaylarsan kaydedilir, vazgeçersen **hiçbir şey olmaz**.
 | | |
 |--|--|
 | **Sağlayıcı** | Google Gemini (Generative Language API) |
-| **Model** | `gemini-2.5-flash` (kodda `GEMINI_MODEL` sabiti) |
-| **Uç nokta** | `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent` |
+| **Model** | `gemini-3.5-flash` (kodda `GEMINI_MODEL` sabiti) |
+| **Uç nokta** | `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent` |
 | **Kimlik** | URL'deki `?key=` ile API anahtarın |
 | **Araç/Fonksiyon çağrısı** | **Var** — 6 araç (5 yazma + 1 okuma), her yazma onaylı |
 | **İlgili kod** | [app.js](app.js): `gatherCoachData`, `coachReportPrompt`, `runAssistantAgent`, `AI_TOOLS`, `geminiGenerate` |

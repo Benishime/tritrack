@@ -13,7 +13,7 @@
   <link rel="manifest" href="manifest.json">
   
   <!-- CSS -->
-  <link rel="stylesheet" href="styles.css?v=1.18">
+  <link rel="stylesheet" href="styles.css?v=1.20">
 </head>
 <body class="theme-auto">
   <div class="app-container">
@@ -552,12 +552,34 @@
           <div id="workout-import-status" class="text-xs text-muted mt-2 text-center"></div>
 
           <details style="margin-top:12px;">
-            <summary class="text-xs text-secondary" style="cursor:pointer;">Strava'dan dosya nasıl indirilir?</summary>
+            <summary class="text-xs text-secondary" style="cursor:pointer;">Huawei saat / Strava'dan dosya nasıl alınır?</summary>
             <div class="text-xs text-muted" style="margin-top:8px; line-height:1.6;">
-              <strong>Tek antrenman:</strong> strava.com → antrenmanı aç → sağ üstteki <strong>"..."</strong> → <strong>"GPX Olarak Dışa Aktar"</strong>.<br>
-              <strong>Tüm geçmiş:</strong> Strava → Ayarlar → Hesabım → <strong>"Verilerini İndir"</strong> → e-postaya gelen arşivdeki <strong>activities</strong> klasöründen .gpx dosyaları.
+              <strong>Huawei saat:</strong> Huawei Health → Ben → Üçüncü taraf uygulamalar → <strong>Strava</strong>'yı bağla
+              (bölgen kapalıysa desteklenen ülke Huawei ID'si). Ya da antrenmanı aç → rota → <strong>GPX/TCX dışa aktar</strong>.<br>
+              <strong>Tek antrenman:</strong> strava.com → antrenmanı aç → <strong>"..."</strong> → <strong>"GPX Olarak Dışa Aktar"</strong>.<br>
+              <strong>Tüm geçmiş:</strong> Strava → Ayarlar → <strong>"Verilerini İndir"</strong> → arşivdeki <strong>activities</strong> klasörü.
             </div>
           </details>
+        </div>
+
+        <!-- ANTRENMAN İÇE AKTARMA (CANLI STRAVA SENKRONU) -->
+        <div class="card strava-card no-press">
+          <div class="strava-header" style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
+            <span style="font-size:24px;">🔄</span>
+            <h3 class="font-bold text-base">Strava Canlı Senkron (otomatik)</h3>
+          </div>
+          <p class="text-sm text-secondary">Bir kez bağla, sonra tek dokunuşla son antrenmanlarını çek. Kurulum için <strong>STRAVA-KURULUM.md</strong>.</p>
+
+          <div class="form-group mt-3">
+            <label class="form-label" for="strava-proxy-input">Strava Proxy URL'si</label>
+            <input class="form-control" type="url" id="strava-proxy-input" placeholder="https://...workers.dev">
+          </div>
+
+          <div class="grid-2 mt-2">
+            <button id="strava-connect-btn" type="button" class="btn btn-primary" style="padding:10px;">🟧 Strava'yı Bağla</button>
+            <button id="strava-sync-btn" type="button" class="btn btn-secondary" style="padding:10px;" disabled>⬇️ Son antrenmanları çek</button>
+          </div>
+          <div id="strava-status" class="text-xs text-muted mt-2 text-center"></div>
         </div>
 
         <!-- 3. PROFILE SETTINGS -->
@@ -1033,7 +1055,7 @@
   </div>
 
   <!-- Javascripts -->
-  <script src="foods.js?v=1.18"></script>
-  <script src="app.js?v=1.18"></script>
+  <script src="foods.js?v=1.20"></script>
+  <script src="app.js?v=1.20"></script>
 </body>
 </html>

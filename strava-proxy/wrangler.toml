@@ -1,0 +1,16 @@
+name = "tritrack-strava-proxy"
+main = "worker.js"
+compatibility_date = "2025-01-01"
+
+# Gizli değerler koda YAZILMAZ — terminalden eklenir:
+#   wrangler secret put STRAVA_CLIENT_ID
+#   wrangler secret put STRAVA_CLIENT_SECRET
+#
+# Yayınlama:
+#   npm i -g wrangler
+#   cd strava-proxy
+#   wrangler login
+#   wrangler deploy
+#
+# Yerel test:
+#   wrangler dev
