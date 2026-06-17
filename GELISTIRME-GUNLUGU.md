@@ -13,6 +13,23 @@ Bu dosya, uygulamada adım adım yapılan geliştirmeleri kaydeder. Sonradan dö
 
 ---
 
+## ✅ PWABuilder Düzenlemeleri & Diyet Planı Senkronizasyon Düzeltmesi
+
+PWABuilder Android paketlemesi uyarılarını gidermek ve diyet planlamasındaki anlık yenilenmeme (senkronizasyon) hatasını çözmek için kapsamlı güncellemeler yapıldı.
+
+- **Model:** Gemini 3.5 Flash (High)
+- **PWABuilder Hata ve Uyarı Çözümleri:**
+  - `manifest.json` dosyasına benzersiz `id` (`/tritrack/`), amaca uygun maskable ikon tanımları ve 1024x1024 boyutlarında iki yeni uygulama ekran görüntüsü (`screenshot-dashboard.png`, `screenshot-analysis.png`) eklendi.
+  - İkon dosyalarının (`icon-192.png`, `icon-512.png`, `icon-maskable-512.png`) piksel boyutları PowerShell `System.Drawing` ile gerçek boyutlarına resize edilerek manifest tanımlarıyla tam eşleşmesi sağlandı (1024px sürümü `icon-1024.png` adıyla ayrıca eklendi).
+  - `sw.js` (Service Worker) önbellek listesine yeni görseller eklendi ve tarayıcı/telefon önbelleğini temizlemeye zorlamak için önbellek sürümü `tritrack-v22`'ye yükseltildi.
+  - Değişiklikler paketlenerek GitHub `main` ve `gelistirme` dallarına başarıyla push edildi.
+- **Haftalık Diyet Planı Senkronizasyon Hatası:**
+  - Sorun: Diyet sekmesinde haftalık görünümdeyken besin ekleme eylemi yapıldığında, eklenen öğeler sadece günlük görünümü yenilediği için haftalık planda anlık olarak belirmiyordu (ancak kopyalama gibi başka bir eylem tetiklendiğinde görünüyorlardı).
+  - Çözüm: `app.js` içerisine hem günlük, hem haftalık hem de dashboard (bugün) diyet görünümlerini eşzamanlı güncelleyen `refreshDietUI()` fonksiyonu tanımlandı.
+  - Diyet ekleme, silme, kopyalama, tamamlama ve yapay zeka ile diyet girdisi yapma yerlerindeki eski render çağrıları `refreshDietUI()` ile değiştirilerek tüm görünümlerin anlık olarak senkronize çalışması sağlandı.
+
+---
+
 ## ✅ Kullanıcı Hesabı + Bulut Senkron (Supabase) — Faz A
 
 TriTrack çok kullanıcılı ürüne dönüştü: hesapla giriş + kullanıcı-bazlı bulut depolama, yerel-öncelikli
