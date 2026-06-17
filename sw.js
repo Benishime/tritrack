@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tritrack-v20';
+const CACHE_NAME = 'tritrack-v21';
 const ASSETS = [
   './',
   './index.html',
@@ -7,7 +7,8 @@ const ASSETS = [
   './foods.js',
   './manifest.json',
   './icon-192.png',
-  './icon-512.png'
+  './icon-512.png',
+  './icon-maskable-512.png'
 ];
 
 self.addEventListener('install', (e) => {

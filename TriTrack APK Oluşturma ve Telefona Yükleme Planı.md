@@ -18,7 +18,11 @@ TriTrack PWA uygulamasını `.apk` dosyasına dönüştürüp telefonuna yüklem
 
 ---
 
-## Aşama 1 — Manifest ve İkon Düzeltmeleri (5 dk)
+## Aşama 1 — Manifest ve İkon Düzeltmeleri ✅ TAMAMLANDI (v1.21)
+
+> ✅ `manifest.json`: description, scope, lang, dir, categories + maskable ikon eklendi.
+> ✅ `sw.js`: `icon-maskable-512.png` ASSETS'e eklendi, cache `v21`.
+> ✅ `icon-maskable-512.png` mevcut. **Uygulama artık APK-hazır.** Sırada Aşama 2 (GitHub Pages deploy).
 
 PWA'nın Android uygulamasına dönüşmesi için manifest dosyasında birkaç ekleme yapılmalı.
 
