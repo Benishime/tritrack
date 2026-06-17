@@ -737,7 +737,7 @@ function toggleDietPlanCompleted(plan, isChecked) {
   }
 
   saveState();
-  renderTodayView();
+  refreshDietUI();
 }
 
 function triggerQuickLog(plan) {
@@ -1407,8 +1407,7 @@ function saveManualFood(e, isPlanned) {
   form.reset();
   form.classList.add('hidden');
   
-  renderDietView();
-  renderTodayView();
+  refreshDietUI();
 }
 
 function searchFoods(query) {
@@ -1620,7 +1619,13 @@ function addSelectedFoodToState(isPlanned) {
   saveState();
   document.getElementById('modal-diet-add').classList.remove('open');
   
+  refreshDietUI();
+}
+
+// Diyet UI'ını tamamen yenile (Günlük, Haftalık ve Dashboard görünümleri)
+function refreshDietUI() {
   renderDietView();
+  renderWeeklyDietView();
   renderTodayView();
 }
 
@@ -1676,8 +1681,7 @@ function renderDietView() {
               // Tüketilenlerden de kaldır (eğer checked ise)
               state.diet = state.diet.filter(f => f.id !== 'fd_sync_' + plan.id);
               saveState();
-              renderDietView();
-              renderTodayView();
+              refreshDietUI();
               showToast("Diyet planı silindi.");
             }
           });
@@ -1727,8 +1731,7 @@ function renderDietView() {
               if (matchingPlan) matchingPlan.completed = false;
             }
             saveState();
-            renderDietView();
-            renderTodayView();
+            refreshDietUI();
             showToast("Besin silindi.");
           });
 
@@ -1850,8 +1853,7 @@ function deleteDietPlan(planId) {
   state.dietPlans = state.dietPlans.filter(p => p.id !== planId);
   state.diet = state.diet.filter(f => f.id !== 'fd_sync_' + planId);
   saveState();
-  renderWeeklyDietView();
-  renderTodayView();
+  refreshDietUI();
   showToast("Plan kalemi silindi.");
 }
 
@@ -1871,8 +1873,7 @@ function copyDietDay(fromDate, toDate) {
     });
   });
   saveState();
-  renderWeeklyDietView();
-  renderTodayView();
+  refreshDietUI();
   showToast(`${items.length} öğün ${shortDateLabel(toDate)} gününe kopyalandı.`);
 }
 
@@ -1904,8 +1905,7 @@ function applyDayToWeek(fromDate) {
     });
   }
   saveState();
-  renderWeeklyDietView();
-  renderTodayView();
+  refreshDietUI();
   showToast("Plan tüm haftaya uygulandı ✅");
 }
 
@@ -2765,7 +2765,7 @@ function aiAddFood(a) {
     quantity: 1, unit: 'piece'
   };
   state.diet.push(food);
-  saveState(); if (typeof renderDietView === 'function') renderDietView(); renderTodayView();
+  saveState(); refreshDietUI();
   return { ok: true, message: `"${food.name}" tüketilenlere eklendi.` };
 }
 
