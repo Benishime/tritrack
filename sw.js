@@ -8,10 +8,14 @@ const ASSETS = [
   './manifest.json',
   './icon-192.png',
   './icon-512.png',
-  './icon-maskable-512.png'
+  './icon-1024.png',
+  './icon-maskable-512.png',
+  './screenshot-dashboard.png',
+  './screenshot-analysis.png'
 ];
 
 self.addEventListener('install', (e) => {
+  self.skipWaiting();
   e.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
   );
@@ -29,6 +33,7 @@ self.addEventListener('activate', (e) => {
       );
     })
   );
+  return self.clients.claim();
 });
 
 self.addEventListener('fetch', (e) => {

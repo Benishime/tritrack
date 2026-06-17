@@ -9,7 +9,29 @@ Bu dosya, uygulamada adım adım yapılan geliştirmeleri kaydeder. Sonradan dö
 > - `index.html` içindeki `?v=1.X` (css + js linkleri)
 > - `sw.js` içindeki `CACHE_NAME = 'tritrack-vX'`
 >
-> **Son sürüm:** `?v=1.20` · `tritrack-v20`
+> **Son sürüm:** `?v=1.22` · `tritrack-v22`
+
+---
+
+## ✅ Kullanıcı Hesabı + Bulut Senkron (Supabase) — Faz A
+
+TriTrack çok kullanıcılı ürüne dönüştü: hesapla giriş + kullanıcı-bazlı bulut depolama, yerel-öncelikli
+çalışmayı bozmadan. Kurulum: **[SUPABASE-KURULUM.md](SUPABASE-KURULUM.md)** + `db/schema.sql`.
+
+- **Model:** kullanıcı başına **tek satır** (`user_data.data jsonb`) = tüm `state`. RLS ile her kullanıcı
+  yalnız kendi verisini görür. Mevcut `normalizeState`/`isValidStateShape` pull'da yeniden kullanıldı.
+- **app.js "1.A AUTH & BULUT":** `initAuth` (oturum kontrol → pull / auth ekranı / misafir),
+  `signIn`/`signUp`/`signOut`/`continueAsGuest`, `pullCloud` (giriş anında bulut doğruluk kaynağı),
+  `pushCloud` (debounced, `saveState`'ten). `state.updatedAt` damgası; çakışmada **son-yazan-kazanır**.
+- **Gizlilik:** `cloudPayload` Gemini anahtarı + Strava token/proxy'yi **buluta göndermez** (cihazda kalır).
+- **Misafir modu korunur:** `tritrack_guest` bayrağı → tamamen yerel (eski davranış). `SUPABASE_URL/ANON_KEY`
+  boşsa hesap ekranı hiç çıkmaz, uygulama saf yerel çalışır.
+- **UI:** `#auth-overlay` (giriş/kayıt, onboarding deseni), Profil'e Hesap kartı + Çıkış. Supabase JS yerel
+  vendor (`supabase.min.js`, sw cache'te → çevrimdışı kabuk korunur).
+- **Yeni kullanıcı:** bulut satırı yoksa onboarding; misafirken veri varsa "hesabına yükleyeyim mi?" taşıma.
+
+> Strava çok-kullanıcı DEĞİL: Strava "tek sporcu" kuralı yüzünden canlı senkron yalnız sahip hesabında;
+> diğer kullanıcılar GPX/elle giriş kullanır. Faz B: Google girişi, parola sıfırlama, çevrimdışı push kuyruğu.
 
 ---
 

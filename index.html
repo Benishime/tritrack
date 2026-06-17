@@ -13,7 +13,7 @@
   <link rel="manifest" href="manifest.json">
   
   <!-- CSS -->
-  <link rel="stylesheet" href="styles.css?v=1.21">
+  <link rel="stylesheet" href="styles.css?v=1.22">
 </head>
 <body class="theme-auto">
   <div class="app-container">
@@ -582,6 +582,20 @@
           <div id="strava-status" class="text-xs text-muted mt-2 text-center"></div>
         </div>
 
+        <!-- HESAP (Supabase auth açıksa görünür) -->
+        <div id="account-card" class="card no-press" style="display:none;">
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <span style="font-size:24px;">👤</span>
+              <div>
+                <div class="font-bold text-base">Hesap</div>
+                <div id="account-email" class="text-xs text-muted">—</div>
+              </div>
+            </div>
+            <button id="account-signout-btn" type="button" class="btn btn-ghost" style="padding:8px 12px; font-size:12px; color:#ef4444; border-color:rgba(239,68,68,0.3);">Çıkış Yap</button>
+          </div>
+        </div>
+
         <!-- 3. PROFILE SETTINGS -->
         <div class="card settings-card no-press">
           <h3 class="font-bold text-base mb-3">Profil ve Hedef Ayarları</h3>
@@ -960,6 +974,37 @@
     </div>
   </div>
 
+  <!-- HESAP / GİRİŞ EKRANI (Supabase auth açıksa) -->
+  <div id="auth-overlay" class="auth-overlay">
+    <div class="auth-card">
+      <div class="auth-logo">
+        <svg viewBox="0 0 24 24" width="40" height="40">
+          <path fill="var(--accent-blue)" d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12C20,13.62 19.5,15.14 18.69,16.4L16.4,14.11C16.79,13.47 17,12.76 17,12A5,5 0 0,0 12,7C11.24,7 10.53,7.21 9.89,7.6L7.6,5.31C8.86,4.5 10.38,4 12,4M5.31,7.6L7.6,9.89C7.21,10.53 7,11.24 7,12A5,5 0 0,0 12,17C12.76,17 13.47,16.79 14.11,16.4L16.4,18.69C15.14,19.5 13.62,20 12,20A8,8 0 0,1 4,12C4,10.38 4.5,8.86 5.31,7.6M12,9A3,3 0 0,1 15,12A3,3 0 0,1 12,15A3,3 0 0,1 9,12A3,3 0 0,1 12,9Z"/>
+        </svg>
+        <h2>Tri<span style="color:var(--accent-blue);">Track</span></h2>
+      </div>
+      <h3 id="auth-title" class="auth-heading">Giriş Yap</h3>
+      <p class="text-xs text-muted" style="text-align:center; margin-bottom:16px;">Verilerin hesabına kaydolur, tüm cihazlarında erişilir.</p>
+
+      <form id="auth-form">
+        <div class="form-group">
+          <label class="form-label" for="auth-email">E-posta</label>
+          <input class="form-control" type="email" id="auth-email" autocomplete="email" placeholder="ornek@eposta.com" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="auth-password">Parola</label>
+          <input class="form-control" type="password" id="auth-password" autocomplete="current-password" placeholder="••••••" minlength="6" required>
+        </div>
+        <div id="auth-error" class="auth-error"></div>
+        <button type="submit" id="auth-submit" class="btn btn-primary btn-full mt-2" style="padding:12px;">Giriş Yap</button>
+      </form>
+
+      <button id="auth-toggle" class="btn btn-ghost btn-full mt-2" style="font-size:13px;">Hesabın yok mu? Kayıt ol</button>
+      <div style="height:1px; background:var(--card-border); margin:14px 0;"></div>
+      <button id="auth-guest-btn" class="btn btn-ghost btn-full" style="font-size:12px; color:var(--text-muted);">Hesapsız (yerel) devam et</button>
+    </div>
+  </div>
+
   <!-- ONBOARDING SİHİRBAZI (İlk açılışta) -->
   <div id="onboarding-overlay" class="onboarding-overlay">
     <div class="onboarding-card">
@@ -1055,7 +1100,8 @@
   </div>
 
   <!-- Javascripts -->
-  <script src="foods.js?v=1.21"></script>
-  <script src="app.js?v=1.21"></script>
+  <script src="supabase.min.js?v=1.22"></script>
+  <script src="foods.js?v=1.22"></script>
+  <script src="app.js?v=1.22"></script>
 </body>
 </html>

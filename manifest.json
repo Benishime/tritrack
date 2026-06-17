@@ -1,10 +1,12 @@
 {
+  "id": "/tritrack/",
   "short_name": "TriTrack",
   "name": "TriTrack - Triatlon ve Koşu Takip",
   "description": "Triatletler ve koşucular için çevrimdışı çalışan antrenman, diyet, uyku/HRV ve analiz takibi; yazabilen AI asistan ve Strava senkronu.",
   "lang": "tr",
   "dir": "ltr",
   "categories": ["health", "fitness", "sports"],
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "icon-192.png",
@@ -19,10 +21,32 @@
       "purpose": "any"
     },
     {
+      "src": "icon-1024.png",
+      "type": "image/png",
+      "sizes": "1024x1024",
+      "purpose": "any"
+    },
+    {
       "src": "icon-maskable-512.png",
       "type": "image/png",
       "sizes": "512x512",
       "purpose": "maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "screenshot-dashboard.png",
+      "type": "image/png",
+      "sizes": "1024x1024",
+      "form_factor": "narrow",
+      "label": "Günlük dashboard: antrenman planı, diyet takibi ve vücut durumu"
+    },
+    {
+      "src": "screenshot-analysis.png",
+      "type": "image/png",
+      "sizes": "1024x1024",
+      "form_factor": "narrow",
+      "label": "Analiz ve istatistikler: haftalık yük, branş dağılımı, kişisel rekorlar"
     }
   ],
   "start_url": "./index.html",
