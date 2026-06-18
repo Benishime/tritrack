@@ -112,6 +112,12 @@ body.theme-dark {
   padding: 0;
 }
 
+/* Genel yardımcı: 'hidden' sınıfı elemanı tamamen gizler
+   (manuel besin formu, besin seçim paneli vb. JS ile açılıp kapanır) */
+.hidden {
+  display: none !important;
+}
+
 html, body {
   width: 100%;
   height: 100%;
