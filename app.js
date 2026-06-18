@@ -1183,6 +1183,9 @@ let activeMealSelector = 'breakfast'; // Hangi öğüne besin eklenecek
 // Günlük takip ekranından açılınca currentDateStr'e eşitlenir.
 let dietTargetDate = currentDateStr;
 
+// Besin ekleme modalının bağlamı: 'track' (günlük tüketim) | 'plan' (haftalık plan)
+let dietModalMode = 'track';
+
 // Haftalık Plan görünümünde gösterilen haftanın bir günü (◀ ▶ ile gezinir)
 let dietWeekAnchor = currentDateStr;
 
@@ -1239,7 +1242,7 @@ function initDietView() {
     if (e.target.classList.contains('add-food-to-meal-btn')) {
       const mealSection = e.target.closest('.meal-section');
       // Günlük takip ekranı: hedef gün = o anki gün
-      openDietModal(mealSection.getAttribute('data-meal'), currentDateStr);
+      openDietModal(mealSection.getAttribute('data-meal'), currentDateStr, 'track');
     }
   });
 
@@ -1327,10 +1330,13 @@ function switchDietPane(pane) {
 // Besin ekleme modalını belirli bir öğün + hedef gün için aç.
 // Günlük takipten çağrılınca targetDate = currentDateStr (plan da tüketim de aynı güne).
 // Haftalık plandan çağrılınca targetDate = seçilen gün (yalnızca plana eklenir).
-function openDietModal(meal, targetDate) {
+function openDietModal(meal, targetDate, mode) {
   const modal = document.getElementById('modal-diet-add');
   activeMealSelector = meal;
   dietTargetDate = targetDate || currentDateStr;
+  // 'plan' = haftalık plana ekleme (yalnız "Plana Ekle"); 'track' = günlük (her ikisi)
+  dietModalMode = mode || 'track';
+  applyDietModalMode(dietModalMode);
 
   // Arama / seçim panelini sıfırla
   document.getElementById('food-search-input').value = '';
@@ -1353,6 +1359,22 @@ function openDietModal(meal, targetDate) {
   }
 
   modal.classList.add('open');
+}
+
+// Modal butonlarını bağlama göre ayarla: plan modunda yalnız "Plana Ekle" görünür
+function applyDietModalMode(mode) {
+  const isPlan = mode === 'plan';
+  const eat = document.getElementById('add-selected-food-btn');     // Tüketilen Ekle (seçim paneli)
+  const plan = document.getElementById('plan-selected-food-btn');   // Plana Ekle (seçim paneli)
+  const mEat = document.getElementById('btn-manual-eat');           // Tüketilen Ekle (manuel form)
+  const mPlan = document.getElementById('btn-manual-plan');         // Plana Ekle (manuel form)
+
+  if (eat) eat.style.display = isPlan ? 'none' : '';
+  if (mEat) mEat.style.display = isPlan ? 'none' : '';
+  // Tek buton kalınca tam genişlik kapla
+  if (plan) plan.style.gridColumn = isPlan ? '1 / -1' : '';
+  if (mPlan) mPlan.style.gridColumn = isPlan ? '1 / -1' : '';
+  if (plan) plan.textContent = isPlan ? '🗓️ Plana Ekle' : 'Plana Ekle';
 }
 
 function saveManualFood(e, isPlanned) {
@@ -1624,9 +1646,10 @@ function addSelectedFoodToState(isPlanned) {
 
 // Diyet UI'ını tamamen yenile (Günlük, Haftalık ve Dashboard görünümleri)
 function refreshDietUI() {
-  renderDietView();
-  renderWeeklyDietView();
-  renderTodayView();
+  // Her görünüm bağımsız sarmalandı: biri hata verse bile diğerleri (özellikle haftalık) güncellenir
+  try { renderDietView(); } catch (e) { console.error('renderDietView hatası:', e); }
+  try { renderWeeklyDietView(); } catch (e) { console.error('renderWeeklyDietView hatası:', e); }
+  try { renderTodayView(); } catch (e) { console.error('renderTodayView hatası:', e); }
 }
 
 function renderDietView() {
@@ -1826,7 +1849,7 @@ function renderWeeklyDietView() {
     // + Ekle → modalı o gün + öğün için aç
     card.querySelectorAll('.diet-meal-add-btn').forEach(btn => {
       btn.addEventListener('click', () =>
-        openDietModal(btn.getAttribute('data-meal'), btn.getAttribute('data-date')));
+        openDietModal(btn.getAttribute('data-meal'), btn.getAttribute('data-date'), 'plan'));
     });
 
     // Plan kalemi sil

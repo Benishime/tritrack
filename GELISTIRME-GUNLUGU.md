@@ -9,7 +9,22 @@ Bu dosya, uygulamada adım adım yapılan geliştirmeleri kaydeder. Sonradan dö
 > - `index.html` içindeki `?v=1.X` (css + js linkleri)
 > - `sw.js` içindeki `CACHE_NAME = 'tritrack-vX'`
 >
-> **Son sürüm:** `?v=1.22` · `tritrack-v22`
+> **Son sürüm:** `?v=1.23` · `tritrack-v23`
+
+---
+
+## ✅ Haftalık Diyet Bug'ı — GERÇEK kök neden (bağlam-duyarlı modal)
+
+Önceki `refreshDietUI()` düzeltmesi yenileme tarafını kapatmıştı ama **bug devam ediyordu**. Asıl sebep:
+besin ekleme modalı her bağlamda **hem "Tüketilen Ekle" hem "Plana Ekle"** gösteriyordu. Haftalık plandan
+"+ Ekle" deyince kullanıcı birincil **"Tüketilen Ekle"**'ye basıyor → veri `state.diet`'e (bugüne tüketim)
+gidiyor, `state.dietPlans`'a (haftalık plan) değil → haftalık listede asla görünmüyor. Yani veri **yanlış yere**
+yazılıyordu; yenileme sorunu değildi.
+
+- **Çözüm:** `openDietModal(meal, date, mode)` — günlük çağrı `'track'`, haftalık çağrı `'plan'`.
+  `applyDietModalMode` plan modunda "Tüketilen Ekle" butonlarını (hem seçim paneli hem manuel form) gizleyip
+  sadece "Plana Ekle"yi tam genişlik bırakır. Böylece haftalıktan eklenen her şey doğru biçimde `dietPlans`'a gider.
+- **Güvence:** `refreshDietUI` artık her görünümü `try/catch` ile sarmalıyor — biri hata verse bile haftalık güncellenir.
 
 ---
 
