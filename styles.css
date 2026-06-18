@@ -921,6 +921,33 @@ html, body {
 .checklist-item.border-highlight-fitness { border-left-color: var(--color-fitness); }
 .checklist-item.border-highlight-diet { border-left-color: #f59e0b; } /* Orange accent for diet plans */
 
+/* Diyet planı: sol kenar rengi artık ÖĞÜNE göre (görsel olarak hangi öğün olduğu anlaşılsın) */
+.checklist-item.border-meal-breakfast { border-left-color: #f59e0b; } /* 🍳 Kahvaltı — kehribar */
+.checklist-item.border-meal-lunch     { border-left-color: #10b981; } /* 🍗 Öğle — yeşil */
+.checklist-item.border-meal-dinner    { border-left-color: #6366f1; } /* 🥗 Akşam — indigo */
+.checklist-item.border-meal-snack     { border-left-color: #ec4899; } /* 🍌 Atıştırmalık — pembe */
+
+/* Öğün renk lejantı (Bugünün Diyet Planı kartı) */
+.meal-color-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin: 2px 0 12px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.meal-color-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.meal-color-legend .meal-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
 /* ==========================================================================
    DATE NAVIGATOR & HEADERS
    ========================================================================== */

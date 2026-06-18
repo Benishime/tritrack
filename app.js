@@ -591,7 +591,7 @@ function renderTodayView() {
       const meta = MEAL_META[plan.meal] || { icon: '🍽', name: plan.meal };
 
       const planItem = document.createElement('div');
-      planItem.className = `checklist-item ${isCompleted ? 'completed' : ''} border-highlight-diet`;
+      planItem.className = `checklist-item ${isCompleted ? 'completed' : ''} border-meal-${plan.meal}`;
       planItem.innerHTML = `
         <label class="checkbox-container">
           <input type="checkbox" ${isCompleted ? 'checked' : ''} data-diet-plan-id="${plan.id}">
