@@ -2863,9 +2863,8 @@ function gatherCoachData() {
     weekTss: Math.round(weekTss),
     race: getRaceInfo(),
     thresholds: { lthr: p.lthr || null, ftp: p.ftp || null, thresholdPace: p.thresholdPace || null, maxHr: p.maxHr || null },
-    // Strava sözleşmesi: Strava kaynaklı ham antrenman detayları 3. taraf AI'ya gönderilmez.
-    // (Haftalık yük gibi kaba toplamlar gider; ayrıntılı liste yalnız kullanıcının girdiği antrenmanlar.)
-    recent: state.workouts.filter(w => w.source !== 'strava').slice().sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 6),
+    // Kişisel kullanım kararı: tüm antrenmanlar (Strava dahil, notlarıyla) AI'a verilir.
+    recent: state.workouts.slice().sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 6),
     readiness: computeReadiness()
   };
 }
