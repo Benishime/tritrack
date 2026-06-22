@@ -9,7 +9,20 @@ Bu dosya, uygulamada adım adım yapılan geliştirmeleri kaydeder. Sonradan dö
 > - `index.html` içindeki `?v=1.X` (css + js linkleri)
 > - `sw.js` içindeki `CACHE_NAME = 'tritrack-vX'`
 >
-> **Son sürüm:** `?v=1.40` · `tritrack-v40`
+> **Son sürüm:** `?v=1.41` · `tritrack-v41`
+
+---
+
+## 🐞 Düzeltme: "Bugün" diyet hedefleri yenilenmiyordu (v1.41)
+
+- **Kök neden:** `loadState`/`normalizeState` profil **nesnesini** garanti ediyordu ama `targetMacros`/
+  `targetDailyCalories` **alt alanlarını** değil. Buluttan/yedekten gelen ya da eski bir profilde `targetMacros`
+  eksikse, `updateDietSummaryDOM` (satır `targetMacros.protein`) **hata fırlatıyordu**. Bu çağrı `renderTodayView`'in
+  **son satırı** olduğundan, Bugün diyet halkası/makro hedefleri sessizce HTML varsayılanlarında (2500/150/300/70)
+  donup kalıyordu → "hedefler yenilenmiyor".
+- **Çözüm:** `ensureProfileDefaults(profile)` yardımcısı eklendi (eksik kalori/makro hedeflerini geri doldurur);
+  `loadState` ve `normalizeState` (bulut sync + içe aktarma) artık bunu uyguluyor. Ayrıca `updateDietSummaryDOM`
+  savunmacı yapıldı (`state.profile.targetMacros || {}`) — bozuk profil artık asla Bugün hedeflerini dondurmaz.
 
 ---
 

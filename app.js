@@ -50,6 +50,21 @@ let editingWorkoutId = null;
 let needsOnboarding = false;
 
 // Verileri LocalStorage'dan Çek
+// Profilin zorunlu diyet hedeflerini güvenceye al (eski/eksik/buluttan gelen profiller için).
+// Eksikse updateDietSummaryDOM çöker ve "Bugün" diyet hedefleri yenilenmez.
+function ensureProfileDefaults(p) {
+  p = p || {};
+  if (p.targetDailyCalories == null) p.targetDailyCalories = 2500;
+  if (!p.targetMacros || typeof p.targetMacros !== 'object') {
+    p.targetMacros = { protein: 150, carbs: 300, fat: 70 };
+  } else {
+    if (p.targetMacros.protein == null) p.targetMacros.protein = 150;
+    if (p.targetMacros.carbs == null) p.targetMacros.carbs = 300;
+    if (p.targetMacros.fat == null) p.targetMacros.fat = 70;
+  }
+  return p;
+}
+
 function loadState() {
   const savedState = localStorage.getItem('tritrack_state');
   if (savedState) {
@@ -57,6 +72,7 @@ function loadState() {
       state = JSON.parse(savedState);
       // Geriye dönük uyumluluk veya boş alan kontrolleri
       if (!state.profile) state.profile = {};
+      ensureProfileDefaults(state.profile);
       if (!state.holisticLogs) state.holisticLogs = {};
       if (!state.plans) state.plans = [];
       if (!state.dietPlans) state.dietPlans = [];
@@ -971,10 +987,11 @@ function updateDietSummaryDOM() {
   totalC = Math.round(totalC * 10) / 10;
   totalF = Math.round(totalF * 10) / 10;
 
+  const macros = state.profile.targetMacros || {};
   const targetCal = state.profile.targetDailyCalories || 2500;
-  const targetP = state.profile.targetMacros.protein || 150;
-  const targetC = state.profile.targetMacros.carbs || 300;
-  const targetF = state.profile.targetMacros.fat || 70;
+  const targetP = macros.protein || 150;
+  const targetC = macros.carbs || 300;
+  const targetF = macros.fat || 70;
 
   if (document.getElementById('diet-calories-consumed')) {
     document.getElementById('diet-calories-consumed').innerText = totalCalories;
@@ -3696,7 +3713,7 @@ function isValidStateShape(obj) {
 // Eksik alanları tamamlayarak güvenli bir state nesnesi döndür (geriye dönük uyumluluk)
 function normalizeState(obj) {
   return {
-    profile: obj.profile || {},
+    profile: ensureProfileDefaults(obj.profile || {}),
     holisticLogs: obj.holisticLogs || {},
     plans: Array.isArray(obj.plans) ? obj.plans : [],
     dietPlans: Array.isArray(obj.dietPlans) ? obj.dietPlans : [],
