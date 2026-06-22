@@ -2839,7 +2839,7 @@ function coachReportPrompt(d) {
     ? d.recent.map(w => `- ${w.date} · ${(SPORT_META[w.sport] || { name: w.sport }).name} · ${Math.round((w.duration || 0) / 60)}dk · ${w.distance || 0}${w.sport === 'swim' ? 'm' : 'km'} · RPE ${w.rpe || '-'}/10${w.notes ? ` · not: ${w.notes}` : ''}`).join('\n')
     : 'Son antrenman kaydı yok.';
 
-  return `Sen triatlet ve koşucular için profesyonel bir yapay zeka antrenörüsün. Türkçe, samimi ama net konuş.
+  return `Sen triatlet ve koşucular için SERT, doğrudan ve mazeret kabul etmeyen profesyonel bir antrenörsün. Türkçe; lafı dolandırma, gerçeği açıkça söyle, gevşekliği/eksiği yüzüne vur ve somut görev ver — ama aşağılama yok, sağlık önceliklidir.
 
 SPORCU: ${p.name}, ${p.weight} kg
 HEDEF: ${p.targetDailyCalories} kcal/gün (P:${p.targetMacros.protein} C:${p.targetMacros.carbs} Y:${p.targetMacros.fat} g)
@@ -2900,7 +2900,7 @@ function generateWeeklyReport() {
   const tw = weekSummary(thisMon);
   const apiKey = p.geminiApiKey;
 
-  const prompt = `Sen profesyonel bir antrenörsün. Türkçe, kısa ve maddeli yaz.
+  const prompt = `Sen SERT, doğrudan ve mazeret kabul etmeyen bir antrenörsün. Türkçe, kısa ve maddeli yaz; eksiği/gevşekliği açıkça söyle, net görev ver — ama yapıcı ve sağlık öncelikli.
 SPORCU: ${p.name}, ${p.weight} kg
 GEÇEN HAFTA: ${lw.sessions} antrenman · ${lw.min} dk · ${lw.km} km · ${lw.tss} TSS
 BU HAFTA (şu ana dek): ${tw.sessions} antrenman · ${tw.min} dk · ${tw.tss} TSS
@@ -3311,7 +3311,7 @@ const AI_TOOLS = [
 function assistantSystemPrompt() {
   const d = gatherCoachData();
   const p = state.profile;
-  return `Sen ${p.name || 'sporcu'} için triatlon ve koşu antrenörü/asistanısın. Türkçe, kısa ve net konuş.
+  return `Sen ${p.name || 'sporcu'} için SERT, doğrudan ve mazeret kabul etmeyen bir triatlon/koşu antrenörüsün. Türkçe konuş; lafı dolandırma, gerçeği açıkça söyle, tembelliği/bahaneyi yüzüne vur ve net görev ver — ama asla aşağılama; sertliğin sporcuyu hedefe taşımak için. Sağlık ve sakatlık riski önceliklidir: aşırı yüklenme/yorgunluk varsa net "dur/dinlen" de. Hedef yarış varsa o tarihe ve döneme göre yönlendir.
 Bugünün tarihi: ${currentDateStr}.
 Kullanıcı bir şey eklemeni/kaydetmeni isterse uygun ARACI çağır (antrenmanEkle, antrenmanPlaniEkle, haftalikPlanEkle, vucutDurumuKaydet, besinEkle, hedefGuncelle). Haftalık program istenirse haftalikPlanEkle ile tüm haftayı tek seferde ekle. Geçmiş veri lazımsa gunVerisiniGetir aracını kullan.
 Kurallar: Tarih verilmezse bugünü kullan. Yüzme mesafesi METRE, koşu/bisiklet KM. Emin değilsen kullanıcıya sor; uydurma.
@@ -4889,6 +4889,8 @@ function obFinish() {
       carbs: parseInt(document.getElementById('ob-carbs').value) || 300,
       fat: parseInt(document.getElementById('ob-fat').value) || 70
     },
+    raceName: (document.getElementById('ob-race-name').value || '').trim() || null,
+    raceDate: document.getElementById('ob-race-date').value || null,
     geminiApiKey: ""
   };
 

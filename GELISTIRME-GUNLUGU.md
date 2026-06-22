@@ -9,7 +9,21 @@ Bu dosya, uygulamada adım adım yapılan geliştirmeleri kaydeder. Sonradan dö
 > - `index.html` içindeki `?v=1.X` (css + js linkleri)
 > - `sw.js` içindeki `CACHE_NAME = 'tritrack-vX'`
 >
-> **Son sürüm:** `?v=1.31` · `tritrack-v31`
+> **Son sürüm:** `?v=1.33` · `tritrack-v33`
+
+---
+
+## ✅ Sert koç kişiliği + onboarding'de hedef yarış
+
+- **Onboarding'e yarış:** 4. adıma 🏁 Hedef Yarış adı + tarihi (`ob-race-name`/`ob-race-date`); `obFinish`
+  bunları `profile.raceName`/`raceDate`'e yazar → koç ilk günden o tarihe göre yönlendirir.
+- **Koç kişiliği "sert ama yapıcı":** `assistantSystemPrompt`, `coachReportPrompt` ve haftalık rapor prompt'u
+  doğrudan/mazeretsiz, gevşekliği yüzüne vuran ama aşağılamayan, **sağlık öncelikli** bir antrenöre çevrildi.
+  Asistan karşılama metni de bu tona göre güncellendi.
+
+> Sürüm 1.32 (Supabase aktivasyonu) + 1.33 (bu) arası küçük adımlar. Tam sertlik/akıl için Gemini API anahtarı önerilir.
+
+---
 
 ---
 
