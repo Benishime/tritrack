@@ -90,8 +90,8 @@ function saveState(localOnly) {
 // 1.A KULLANICI HESABI & BULUT SENKRON (SUPABASE)
 // ==========================================
 // Doldurmak için: SUPABASE-KURULUM.md. Boş bırakılırsa uygulama tamamen yereldir (hesap ekranı çıkmaz).
-const SUPABASE_URL = '';
-const SUPABASE_ANON_KEY = '';
+const SUPABASE_URL = 'https://piqyiroknhxadttemkih.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_j4PB4o4_hfHxFFMGs5ocKA_SR7aJDUw';
 
 let sbClient = null;       // supabase client (auth açıksa)
 let currentUser = null;    // girişli kullanıcı
