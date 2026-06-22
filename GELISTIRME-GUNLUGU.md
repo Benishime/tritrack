@@ -9,7 +9,24 @@ Bu dosya, uygulamada adım adım yapılan geliştirmeleri kaydeder. Sonradan dö
 > - `index.html` içindeki `?v=1.X` (css + js linkleri)
 > - `sw.js` içindeki `CACHE_NAME = 'tritrack-vX'`
 >
-> **Son sürüm:** `?v=1.33` · `tritrack-v33`
+> **Son sürüm:** `?v=1.34` · `tritrack-v34`
+
+---
+
+## ✅ Çoklu AI sağlayıcı + uzman bilgi tabanı (A+B+D)
+
+- **A+D · Çoklu sağlayıcı/model:** `AI_PROVIDERS` (Gemini/Claude/OpenAI) + `aiProvider/aiModel/aiKey/aiSupportsTools`
+  yardımcıları. Tek `callLLM(systemText, userText)` dispatcher — Gemini (`generativelanguage`), Claude
+  (`api.anthropic.com`, `anthropic-dangerous-direct-browser-access`), OpenAI (`chat/completions`). Hepsi tarayıcıdan,
+  kullanıcının kendi anahtarıyla (sunucusuz). Ayarlar'a **Sağlayıcı + Model + Anahtar** alanları (sağlayıcı başına anahtar).
+  Raporlar + sohbet `callLLM`'e bağlandı; `updateAiBadge` sağlayıcı adını gösterir.
+- **Tool/yazma:** function-calling (sohbetten otomatik antrenman/plan ekleme) **yalnız Gemini**'de; Claude/OpenAI
+  metin tavsiyesi verir (not düşüldü). Gemini agent artık seçilen modeli (örn. `gemini-3.5-pro`) kullanıyor.
+- **B · Uzman bilgi tabanı:** `COACHING_KB` (periyotlama, kutuplaşmış yoğunluk, %10 kuralı/ACWR, toparlanma,
+  yakıtlama, zone/eşik, protein) tüm prompt'lara gömüldü → genel model "uzman koç" gibi davranır (fine-tune'a gerek yok).
+- Anahtarlar (`geminiApiKey`/`claudeApiKey`/`openaiApiKey`) buluttan dışlanıyor (`cloudPayload`).
+
+---
 
 ---
 

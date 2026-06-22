@@ -112,7 +112,7 @@ function hasUserData(s) {
 // Buluta gönderilecek kopya — cihaza özel sırlar (Gemini anahtarı, Strava token) hariç
 function cloudPayload(s) {
   const copy = JSON.parse(JSON.stringify(s));
-  if (copy.profile) { delete copy.profile.geminiApiKey; delete copy.profile.strava; delete copy.profile.stravaProxy; }
+  if (copy.profile) { delete copy.profile.geminiApiKey; delete copy.profile.claudeApiKey; delete copy.profile.openaiApiKey; delete copy.profile.strava; delete copy.profile.stravaProxy; }
   return copy;
 }
 
@@ -2552,7 +2552,21 @@ function initProfileView() {
   document.getElementById('settings-lthr').value = state.profile.lthr || '';
   document.getElementById('settings-ftp').value = state.profile.ftp || '';
   document.getElementById('settings-threshold-pace').value = state.profile.thresholdPace || '';
-  document.getElementById('settings-gemini-key').value = state.profile.geminiApiKey || '';
+  // AI sağlayıcı / model / anahtar
+  const aiProviderSel = document.getElementById('settings-ai-provider');
+  const aiModelInp = document.getElementById('settings-ai-model');
+  const aiKeyInp = document.getElementById('settings-ai-key');
+  const aiKeyLabel = document.getElementById('settings-ai-key-label');
+  aiProviderSel.value = state.profile.aiProvider || 'gemini';
+  aiModelInp.value = state.profile.aiModel || '';
+  const syncAiKeyField = () => {
+    const prov = aiProviderSel.value;
+    aiModelInp.placeholder = AI_PROVIDERS[prov].defaultModel;
+    aiKeyLabel.textContent = prov === 'gemini' ? 'Gemini' : prov === 'claude' ? 'Claude' : 'OpenAI';
+    aiKeyInp.value = state.profile[AI_PROVIDERS[prov].keyField] || '';
+  };
+  aiProviderSel.addEventListener('change', syncAiKeyField);
+  syncAiKeyField();
 
   updateAiBadge();
 
@@ -2575,7 +2589,10 @@ function initProfileView() {
     state.profile.lthr = numOrNull('settings-lthr');
     state.profile.ftp = numOrNull('settings-ftp');
     state.profile.thresholdPace = (document.getElementById('settings-threshold-pace').value || '').trim() || null;
-    state.profile.geminiApiKey = document.getElementById('settings-gemini-key').value;
+    const aiProv = document.getElementById('settings-ai-provider').value;
+    state.profile.aiProvider = aiProv;
+    state.profile.aiModel = (document.getElementById('settings-ai-model').value || '').trim() || null;
+    state.profile[AI_PROVIDERS[aiProv].keyField] = document.getElementById('settings-ai-key').value;
 
     saveState();
     showToast("Profil ayarları kaydedildi.");
@@ -2626,8 +2643,9 @@ function initProfileView() {
 
 function updateAiBadge() {
   const badge = document.getElementById('ai-status-badge');
-  if (state.profile.geminiApiKey) {
-    badge.innerText = "Gemini Bulut Modu";
+  if (!badge) return;
+  if (aiKey()) {
+    badge.innerText = AI_PROVIDERS[aiProvider()].label + ' · Bulut';
     badge.className = "badge badge-cloud";
     badge.style.backgroundColor = 'rgba(59, 130, 246, 0.15)';
     badge.style.color = 'var(--accent-blue)';
@@ -2731,7 +2749,28 @@ function renderMarkdownLite(text) {
 }
 
 // Güncel Gemini modeli (gerekirse buradan değiştir). 2026-06: 2.0 modelleri kapatıldı → 3.5-flash.
-const GEMINI_MODEL = 'gemini-3.5-flash';
+const GEMINI_MODEL = 'gemini-3.5-flash'; // gemini agent'in varsayilani (geri uyum)
+
+// --- Çoklu AI sağlayıcı (A+D) ---
+const AI_PROVIDERS = {
+  gemini: { label: 'Google Gemini', defaultModel: 'gemini-3.5-flash', keyField: 'geminiApiKey', tools: true },
+  claude: { label: 'Anthropic Claude', defaultModel: 'claude-sonnet-4-6', keyField: 'claudeApiKey', tools: false },
+  openai: { label: 'OpenAI GPT', defaultModel: 'gpt-4o', keyField: 'openaiApiKey', tools: false }
+};
+function aiProvider() { return AI_PROVIDERS[state.profile.aiProvider] ? state.profile.aiProvider : 'gemini'; }
+function aiModel() { return (state.profile.aiModel || '').trim() || AI_PROVIDERS[aiProvider()].defaultModel; }
+function aiKey() { return state.profile[AI_PROVIDERS[aiProvider()].keyField] || ''; }
+function aiSupportsTools() { return AI_PROVIDERS[aiProvider()].tools; }
+
+// Uzman koçluk bilgi tabanı (B) — her prompt'a gömülür, modeli "uzman" yapar
+const COACHING_KB = `UZMAN İLKELERİ (bunlara göre yönlendir):
+- Periyotlama: Base (uzun, düşük yoğunluk, hacim kur) → Build (eşik/VO2max kalite ekle) → Peak (yarışa özgü kalite, hacmi koru) → Taper (son 1-3 hafta hacmi %40-60 düşür, yoğunluğu koru).
+- Yoğunluk dağılımı kutuplaşmış olsun: ~%80 düşük (Z1-Z2 kolay), ~%20 yüksek (Z4-Z5). Sürekli "orta" (Z3) tuzaktır.
+- Yük artışı: haftalık toplamı %10'dan fazla artırma. ACWR (akut/kronik) 0.8-1.3 güvenli; >1.5 ciddi sakatlık riski → net azalt de.
+- Toparlanma: HRV ortalamanın altında veya uyku <7sa ise yoğunluğu düşür/dinlen. Form/TSB çok negatifse (<-20) dinlenme günü şart. Uyku 7-9 saat.
+- Yakıtlama: >90 dk seansta saatte 60-90 g karbonhidrat; seans sonrası ilk 60 dk ~1 g/kg karb + 0.3 g/kg protein.
+- Zone'lar eşiklerden gelir: koşu eşik temposu, bisiklet FTP, genel LTHR. Eşik yoksa kullanıcıyı test/girişe yönlendir.
+- Beslenme: antrenman yoğunluğuna göre karb; protein ~1.6-2.0 g/kg/gün kas onarımı için.`;
 
 function fmtNum(v, dec) {
   if (v == null) return '-';
@@ -2841,6 +2880,8 @@ function coachReportPrompt(d) {
 
   return `Sen triatlet ve koşucular için SERT, doğrudan ve mazeret kabul etmeyen profesyonel bir antrenörsün. Türkçe; lafı dolandırma, gerçeği açıkça söyle, gevşekliği/eksiği yüzüne vur ve somut görev ver — ama aşağılama yok, sağlık önceliklidir.
 
+${COACHING_KB}
+
 SPORCU: ${p.name}, ${p.weight} kg
 HEDEF: ${p.targetDailyCalories} kcal/gün (P:${p.targetMacros.protein} C:${p.targetMacros.carbs} Y:${p.targetMacros.fat} g)
 
@@ -2898,9 +2939,9 @@ function generateWeeklyReport() {
   const thisMon = mondayOf(currentDateStr);
   const lw = weekSummary(addDaysStr(thisMon, -7));
   const tw = weekSummary(thisMon);
-  const apiKey = p.geminiApiKey;
 
   const prompt = `Sen SERT, doğrudan ve mazeret kabul etmeyen bir antrenörsün. Türkçe, kısa ve maddeli yaz; eksiği/gevşekliği açıkça söyle, net görev ver — ama yapıcı ve sağlık öncelikli.
+${COACHING_KB}
 SPORCU: ${p.name}, ${p.weight} kg
 GEÇEN HAFTA: ${lw.sessions} antrenman · ${lw.min} dk · ${lw.km} km · ${lw.tss} TSS
 BU HAFTA (şu ana dek): ${tw.sessions} antrenman · ${tw.min} dk · ${tw.tss} TSS
@@ -2911,8 +2952,8 @@ ${d.race ? `HEDEF YARIŞ: ${d.race.name} — ${d.race.daysLeft} gün (${d.race.p
 2) Bu hafta için odak: forma, ACWR'ye${d.race ? ', yarış dönemine' : ''} göre kaç antrenman, hangi yoğunluk, ne kadar dinlenme.
 Kısa ve doğrudan uygulanabilir.`;
 
-  if (apiKey) {
-    callGeminiAPI(apiKey, prompt)
+  if (aiKey()) {
+    callLLM('', prompt)
       .then(reply => { loader.remove(); appendChatMessage('bot', reply); })
       .catch(() => { loader.remove(); appendChatMessage('bot', weeklyLocalReport(lw, tw, d)); });
   } else {
@@ -2931,15 +2972,14 @@ function generateCoachReport() {
   container.scrollTop = container.scrollHeight;
 
   const data = gatherCoachData();
-  const apiKey = state.profile.geminiApiKey;
 
-  if (apiKey) {
-    callGeminiAPI(apiKey, coachReportPrompt(data))
+  if (aiKey()) {
+    callLLM('', coachReportPrompt(data))
       .then(reply => { loader.remove(); appendChatMessage('bot', reply); })
       .catch(err => {
-        console.error("Gemini API hatası, yerel moda geçiliyor", err);
+        console.error("AI hatası, yerel moda geçiliyor", err);
         loader.remove();
-        generateLocalReport(data, "Gemini bağlantısı kurulamadı, yerel analiz:\n\n");
+        generateLocalReport(data, `${AI_PROVIDERS[aiProvider()].label} bağlantısı kurulamadı, yerel analiz:\n\n`);
       });
   } else {
     setTimeout(() => { loader.remove(); generateLocalReport(data); }, 1200);
@@ -2947,7 +2987,7 @@ function generateCoachReport() {
 }
 
 async function callGeminiAPI(apiKey, promptText) {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${aiModel()}:generateContent?key=${apiKey}`;
   const response = await fetch(url, {
     method: 'POST',
     headers: {
@@ -2973,6 +3013,54 @@ async function callGeminiAPI(apiKey, promptText) {
   } else {
     throw new Error("API yanıt formatı geçersiz.");
   }
+}
+
+// Çoklu sağlayıcı tek-metin çağrısı (Gemini/Claude/OpenAI) — rapor + tool'suz sohbet için
+async function callLLM(systemText, userText) {
+  const provider = aiProvider();
+  const key = aiKey();
+  const model = aiModel();
+  if (!key) throw new Error('API anahtarı girilmemiş');
+
+  if (provider === 'claude') {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-api-key': key,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({ model, max_tokens: 1024, system: systemText || undefined, messages: [{ role: 'user', content: userText }] })
+    });
+    if (!res.ok) throw new Error('Claude HTTP ' + res.status);
+    const d = await res.json();
+    return (d.content && d.content[0] && d.content[0].text) || '';
+  }
+
+  if (provider === 'openai') {
+    const messages = [];
+    if (systemText) messages.push({ role: 'system', content: systemText });
+    messages.push({ role: 'user', content: userText });
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'Authorization': 'Bearer ' + key },
+      body: JSON.stringify({ model, messages })
+    });
+    if (!res.ok) throw new Error('OpenAI HTTP ' + res.status);
+    const d = await res.json();
+    return (d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content) || '';
+  }
+
+  // gemini (varsayılan)
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
+  const body = { contents: [{ role: 'user', parts: [{ text: userText }] }] };
+  if (systemText) body.systemInstruction = { parts: [{ text: systemText }] };
+  const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  if (!res.ok) throw new Error('Gemini HTTP ' + res.status);
+  const d = await res.json();
+  const parts = d.candidates && d.candidates[0] && d.candidates[0].content && d.candidates[0].content.parts;
+  return (parts && parts.map(p => p.text).filter(Boolean).join('\n')) || '';
 }
 
 function generateLocalReport(d, prefixText = "") {
@@ -3048,11 +3136,11 @@ function handleCoachChat(userText) {
   container.appendChild(loader);
   container.scrollTop = container.scrollHeight;
 
-  const apiKey = state.profile.geminiApiKey;
+  const key = aiKey();
 
-  if (apiKey) {
-    // Araç (function calling) destekli agent: okuma + (onaylı) yazma
-    runAssistantAgent(apiKey, userText, loader)
+  if (key && aiSupportsTools()) {
+    // Gemini: araç (function calling) destekli agent — okuma + (onaylı) yazma
+    runAssistantAgent(key, userText, loader)
       .then(reply => {
         loader.remove();
         if (reply) appendChatMessage('bot', reply);
@@ -3060,7 +3148,22 @@ function handleCoachChat(userText) {
       .catch(err => {
         console.error("Asistan hatası", err);
         loader.remove();
-        appendChatMessage('bot', "Üzgünüm, bağlantıda sorun oldu: " + err.message + ". Profil'den API anahtarını kontrol et.");
+        appendChatMessage('bot', "Üzgünüm, bağlantıda sorun oldu: " + err.message + ". Profil'den API anahtarını/sağlayıcıyı kontrol et.");
+      });
+  } else if (key) {
+    // Claude/OpenAI: tool yok → metin tavsiyesi (kayıt için Gemini gerekir)
+    aiChatTurns.push({ role: 'user', text: userText });
+    const hist = aiChatTurns.slice(-8).map(t => `${t.role === 'user' ? 'Sporcu' : 'Koç'}: ${t.text}`).join('\n');
+    callLLM(assistantSystemPrompt(), hist + '\nKoç:')
+      .then(reply => {
+        loader.remove();
+        appendChatMessage('bot', reply);
+        aiChatTurns.push({ role: 'model', text: reply });
+        if (aiChatTurns.length > 16) aiChatTurns = aiChatTurns.slice(-16);
+      })
+      .catch(err => {
+        loader.remove();
+        appendChatMessage('bot', `Bağlantı sorunu: ${err.message}. (Not: otomatik kayıt yalnız Gemini'de çalışır; Claude/OpenAI tavsiye verir.)`);
       });
   } else {
     setTimeout(() => {
@@ -3312,6 +3415,7 @@ function assistantSystemPrompt() {
   const d = gatherCoachData();
   const p = state.profile;
   return `Sen ${p.name || 'sporcu'} için SERT, doğrudan ve mazeret kabul etmeyen bir triatlon/koşu antrenörüsün. Türkçe konuş; lafı dolandırma, gerçeği açıkça söyle, tembelliği/bahaneyi yüzüne vur ve net görev ver — ama asla aşağılama; sertliğin sporcuyu hedefe taşımak için. Sağlık ve sakatlık riski önceliklidir: aşırı yüklenme/yorgunluk varsa net "dur/dinlen" de. Hedef yarış varsa o tarihe ve döneme göre yönlendir.
+${COACHING_KB}
 Bugünün tarihi: ${currentDateStr}.
 Kullanıcı bir şey eklemeni/kaydetmeni isterse uygun ARACI çağır (antrenmanEkle, antrenmanPlaniEkle, haftalikPlanEkle, vucutDurumuKaydet, besinEkle, hedefGuncelle). Haftalık program istenirse haftalikPlanEkle ile tüm haftayı tek seferde ekle. Geçmiş veri lazımsa gunVerisiniGetir aracını kullan.
 Kurallar: Tarih verilmezse bugünü kullan. Yüzme mesafesi METRE, koşu/bisiklet KM. Emin değilsen kullanıcıya sor; uydurma.
@@ -3320,7 +3424,7 @@ Tavsiye verirken bu verileri (form, ACWR, yarışa kalan süre/dönem) dikkate a
 }
 
 async function geminiGenerate(apiKey, contents, systemText, tools) {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${aiModel()}:generateContent?key=${apiKey}`;
   const body = { contents };
   if (systemText) body.systemInstruction = { parts: [{ text: systemText }] };
   if (tools) body.tools = tools;
