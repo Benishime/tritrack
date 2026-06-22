@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tritrack-v38';
+const CACHE_NAME = 'tritrack-v39';
 const ASSETS = [
   './',
   './index.html',
@@ -37,14 +37,24 @@ self.addEventListener('activate', (e) => {
 });
 
 self.addEventListener('fetch', (e) => {
+  const req = e.request;
+  const isHTML = req.mode === 'navigate' || (req.headers.get('accept') || '').includes('text/html');
+
+  // HTML/navigasyon: AĞ-ÖNCELİKLİ → en güncel sürüm hemen gelir (eski önbellekte takılı kalmaz).
+  // Çevrimdışıysa önbellekteki index.html'e düşer.
+  if (isHTML) {
+    e.respondWith(
+      fetch(req).then((res) => {
+        const copy = res.clone();
+        caches.open(CACHE_NAME).then((c) => c.put('./index.html', copy)).catch(() => {});
+        return res;
+      }).catch(() => caches.match(req).then((r) => r || caches.match('./index.html')))
+    );
+    return;
+  }
+
+  // Diğer (sürümlü ?v= asset'ler): önbellek-öncelikli, yoksa ağ.
   e.respondWith(
-    caches.match(e.request).then((cachedResponse) => {
-      return cachedResponse || fetch(e.request).catch(() => {
-        // Fallback for offline if resources aren't cached
-        if (e.request.mode === 'navigate') {
-          return caches.match('./index.html');
-        }
-      });
-    })
+    caches.match(req).then((cached) => cached || fetch(req))
   );
 });

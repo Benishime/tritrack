@@ -28,6 +28,18 @@ function formatDate(dateObj) {
   return `${year}-${month}-${day}`;
 }
 
+// "YYYY-MM-DD" metnini YEREL saat diliminde Date'e çevir.
+// (new Date("2026-06-23") UTC parse eder → bazı saat dilimlerinde gün kayar.)
+function parseLocalDate(dateStr) {
+  const [y, m, d] = String(dateStr).split('-').map(Number);
+  return new Date(y, (m || 1) - 1, d || 1);
+}
+
+// Benzersiz id üretici (aynı milisaniyede çakışmayı önler)
+function generateId(prefix = '') {
+  return prefix + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
+}
+
 // Bugünün Tarih Değişkeni (State'deki geçerli gün)
 let currentDateStr = formatDate(new Date());
 
@@ -575,7 +587,7 @@ function renderRaceCard() {
   const date = state.profile.raceDate;
   if (!date) { card.classList.add('hidden'); return; }
   const today = new Date(); today.setHours(0, 0, 0, 0);
-  const race = new Date(date); race.setHours(0, 0, 0, 0);
+  const race = parseLocalDate(date); race.setHours(0, 0, 0, 0);
   const days = Math.round((race - today) / 86400000);
   document.getElementById('race-name').textContent = state.profile.raceName || 'Hedef yarış';
   const daysEl = document.getElementById('race-days');
@@ -623,14 +635,14 @@ function renderStreakRecap() {
 }
 
 function changeCurrentDate(daysOffset) {
-  const d = new Date(currentDateStr);
+  const d = parseLocalDate(currentDateStr);
   d.setDate(d.getDate() + daysOffset);
   currentDateStr = formatDate(d);
   renderTodayView();
 }
 
 function renderTodayView() {
-  const dateObj = new Date(currentDateStr);
+  const dateObj = parseLocalDate(currentDateStr);
   const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
   document.getElementById('current-date-title').innerText = dateObj.toLocaleDateString('tr-TR', options);
   renderWaterCard();
@@ -982,7 +994,7 @@ function initProgramView() {
     const details = document.getElementById('plan-details').value;
 
     const newPlan = {
-      id: 'p_' + Date.now(),
+      id: generateId('p_'),
       date,
       sport,
       targetDistance,
@@ -1034,7 +1046,7 @@ function saveWorkoutTemplate(t) {
     `${(SPORT_META[t.sport] || {}).name || t.sport}${t.targetDistance ? ' ' + t.targetDistance : ''}`;
   const existing = state.templates.find(x => x.name === name);
   if (existing) Object.assign(existing, t, { name });
-  else state.templates.push({ id: 'tpl_' + Date.now(), name, sport: t.sport, targetDistance: t.targetDistance, targetDuration: t.targetDuration, details: t.details });
+  else state.templates.push({ id: generateId('tpl_'), name, sport: t.sport, targetDistance: t.targetDistance, targetDuration: t.targetDuration, details: t.details });
   showToast('Şablon kaydedildi ⭐');
 }
 
@@ -1122,8 +1134,8 @@ function initBulkPlanModal() {
 }
 
 function updateBulkWeekLabel() {
-  const start = new Date(bulkWeekMonday);
-  const end = new Date(addDaysStr(bulkWeekMonday, 6));
+  const start = parseLocalDate(bulkWeekMonday);
+  const end = parseLocalDate(addDaysStr(bulkWeekMonday, 6));
   const opt = { day: 'numeric', month: 'short' };
   document.getElementById('bulk-week-label').innerText =
     `${start.toLocaleDateString('tr-TR', opt)} – ${end.toLocaleDateString('tr-TR', opt)}`;
@@ -1250,7 +1262,7 @@ function submitBulkPlan() {
 
   workouts.forEach((p, i) => {
     state.plans.push({
-      id: 'p_' + Date.now() + '_' + i,
+      id: generateId('p_'),
       date: p.date,
       sport: p.sport,
       targetDistance: p.targetDistance,
@@ -1275,7 +1287,7 @@ function escapeHtml(s) {
 let calendarAnchor = formatDate(new Date());
 
 function shiftCalendarMonth(delta) {
-  const d = new Date(calendarAnchor);
+  const d = parseLocalDate(calendarAnchor);
   d.setDate(1);
   d.setMonth(d.getMonth() + delta);
   calendarAnchor = formatDate(d);
@@ -1286,7 +1298,7 @@ function renderCalendar() {
   const grid = document.getElementById('calendar-grid');
   const title = document.getElementById('cal-title');
   if (!grid || !title) return;
-  const d = new Date(calendarAnchor);
+  const d = parseLocalDate(calendarAnchor);
   const year = d.getFullYear(), month = d.getMonth();
   title.textContent = d.toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' });
   const startW = (new Date(year, month, 1).getDay() + 6) % 7; // Pazartesi = 0
@@ -1314,7 +1326,7 @@ function renderCalendar() {
 
 function renderProgramView() {
   renderCalendar();
-  const curr = new Date(currentDateStr);
+  const curr = parseLocalDate(currentDateStr);
   const startOfWeek = new Date(curr);
   const currentDay = curr.getDay();
   const distanceToMon = currentDay === 0 ? -6 : 1 - currentDay;
@@ -1427,7 +1439,7 @@ function formatPortion(qty, unit) {
 function shortDateLabel(dateStr) {
   if (dateStr === currentDateStr) return 'bugün';
   if (dateStr === addDaysStr(currentDateStr, 1)) return 'yarın';
-  const d = new Date(dateStr);
+  const d = parseLocalDate(dateStr);
   return d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', weekday: 'short' });
 }
 
@@ -1596,7 +1608,7 @@ function saveManualFood(e, isPlanned) {
 
   if (isPlanned) {
     const newPlan = {
-      id: 'dp_' + Date.now(),
+      id: generateId('dp_'),
       date: dietTargetDate,
       meal: activeMealSelector,
       name: name,
@@ -1612,7 +1624,7 @@ function saveManualFood(e, isPlanned) {
     showToast(`"${name}" ${dietPlanTargetLabel()} planına eklendi.`);
   } else {
     const newFood = {
-      id: 'fd_' + Date.now(),
+      id: generateId('fd_'),
       date: currentDateStr,
       meal: activeMealSelector,
       name: name,
@@ -1810,7 +1822,7 @@ function addSelectedFoodToState(isPlanned) {
 
   if (isPlanned) {
     const calculatedFood = {
-      id: 'dp_' + Date.now(),
+      id: generateId('dp_'),
       date: dietTargetDate,
       meal: activeMealSelector,
       name: selectedFoodObject.name,
@@ -1826,7 +1838,7 @@ function addSelectedFoodToState(isPlanned) {
     showToast(`"${calculatedFood.name}" ${dietPlanTargetLabel()} planına eklendi.`);
   } else {
     const calculatedFood = {
-      id: 'fd_' + Date.now(),
+      id: generateId('fd_'),
       date: currentDateStr,
       meal: activeMealSelector,
       name: selectedFoodObject.name,
@@ -1990,7 +2002,7 @@ function renderWeeklyDietView() {
   const weekEnd = addDaysStr(weekStart, 6);
 
   // Başlık: tarih aralığı
-  const sd = new Date(weekStart), ed = new Date(weekEnd);
+  const sd = parseLocalDate(weekStart), ed = parseLocalDate(weekEnd);
   const fmt = d => d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' });
   document.getElementById('diet-week-title').textContent = `${fmt(sd)} – ${fmt(ed)}`;
 
@@ -1999,7 +2011,7 @@ function renderWeeklyDietView() {
 
   for (let i = 0; i < 7; i++) {
     const dateStr = addDaysStr(weekStart, i);
-    const d = new Date(dateStr);
+    const d = parseLocalDate(dateStr);
     const isToday = dateStr === currentDateStr;
     const kcal = Math.round(dayPlanCalories(dateStr));
 
@@ -2093,7 +2105,7 @@ function copyDietDay(fromDate, toDate) {
   items.forEach((p, idx) => {
     state.dietPlans.push({
       ...p,
-      id: 'dp_' + Date.now() + '_' + idx,
+      id: generateId('dp_'),
       date: toDate,
       completed: false
     });
@@ -2124,7 +2136,7 @@ async function applyDayToWeek(fromDate) {
     source.forEach((p, idx) => {
       state.dietPlans.push({
         ...p,
-        id: 'dp_' + Date.now() + '_' + i + '_' + idx,
+        id: generateId('dp_'),
         date: dateStr,
         completed: false
       });
@@ -2230,7 +2242,7 @@ function initWorkoutLogView() {
     const paceStr = `${paceMin}:${String(paceSec).padStart(2, '0')} /km`;
 
     const workout = {
-      id: 'w_' + Date.now(),
+      id: generateId('w_'),
       date: currentDateStr,
       sport: 'run',
       duration,
@@ -2266,7 +2278,7 @@ function initWorkoutLogView() {
     const paceStr = `${speed} km/sa`;
 
     const workout = {
-      id: 'w_' + Date.now(),
+      id: generateId('w_'),
       date: currentDateStr,
       sport: 'bike',
       duration,
@@ -2305,7 +2317,7 @@ function initWorkoutLogView() {
     const paceStr = `${paceMin}:${String(paceSec).padStart(2, '0')} /100m`;
 
     const workout = {
-      id: 'w_' + Date.now(),
+      id: generateId('w_'),
       date: currentDateStr,
       sport: 'swim',
       duration,
@@ -2351,7 +2363,7 @@ function initWorkoutLogView() {
     }
 
     const workout = {
-      id: 'w_' + Date.now(),
+      id: generateId('w_'),
       date: currentDateStr,
       sport: 'fitness',
       duration: fitnessDuration > 0 ? fitnessDuration : exercises.length * 5 * 60, // girilmezse tahmin
@@ -2829,7 +2841,7 @@ function getRaceInfo() {
   const date = state.profile.raceDate;
   if (!date) return null;
   const today = new Date(); today.setHours(0, 0, 0, 0);
-  const race = new Date(date); race.setHours(0, 0, 0, 0);
+  const race = parseLocalDate(date); race.setHours(0, 0, 0, 0);
   const days = Math.round((race - today) / 86400000);
   if (days < 0) return { name: state.profile.raceName || 'Yarış', daysLeft: days, phase: 'geçti' };
   const weeks = Math.max(1, Math.ceil(days / 7));
@@ -3199,7 +3211,7 @@ function aiAddWorkout(a) {
   const date = a.date || currentDateStr;
   const durationSec = a.durationMin ? Math.round(a.durationMin * 60) : 0;
   const w = {
-    id: 'w_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+    id: generateId('w_'),
     date, sport: a.sport, duration: durationSec,
     rpe: (a.rpe != null) ? a.rpe : 5,
     notes: a.notes || ''
@@ -3216,7 +3228,7 @@ function aiAddWorkout(a) {
 
 function aiAddPlan(a) {
   const plan = {
-    id: 'p_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+    id: generateId('p_'),
     date: a.date || currentDateStr, sport: a.sport,
     targetDistance: (a.targetDistance != null) ? a.targetDistance : null,
     targetDuration: (a.targetDurationMin != null) ? a.targetDurationMin : null,
@@ -3235,7 +3247,7 @@ function aiAddWeekPlan(a) {
   items.forEach(it => {
     if (it.sport == null || it.gun == null) return;
     state.plans.push({
-      id: 'p_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+      id: generateId('p_'),
       date: addDaysStr(weekStart, Math.max(0, Math.min(6, it.gun))),
       sport: it.sport,
       targetDistance: it.mesafe != null ? it.mesafe : null,
@@ -3261,7 +3273,7 @@ function aiSetBody(a) {
 
 function aiAddFood(a) {
   const food = {
-    id: 'fd_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+    id: generateId('fd_'),
     date: a.date || currentDateStr, meal: a.meal || 'snack', name: a.name || 'Besin',
     calories: a.calories || 0, protein: a.protein || 0, carbs: a.carbs || 0, fat: a.fat || 0,
     quantity: 1, unit: 'piece'
@@ -3808,7 +3820,7 @@ function addImportedWorkout(p) {
   if (state.workouts.some(w => w.importKey === importKey)) return 'skipped';
 
   const workout = {
-    id: 'w_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+    id: generateId('w_'),
     date,
     sport: p.sport,
     duration: p.duration,
@@ -4047,7 +4059,7 @@ const SPORT_ORDER = ['run', 'bike', 'swim', 'fitness'];
 
 // Verilen tarihin haftasının Pazartesi'sini döndür (YYYY-MM-DD)
 function mondayOf(dateStr) {
-  const d = new Date(dateStr);
+  const d = parseLocalDate(dateStr);
   const day = d.getDay(); // 0=Pazar
   const diff = day === 0 ? -6 : 1 - day;
   d.setDate(d.getDate() + diff);
@@ -4055,7 +4067,7 @@ function mondayOf(dateStr) {
 }
 
 function addDaysStr(dateStr, n) {
-  const d = new Date(dateStr);
+  const d = parseLocalDate(dateStr);
   d.setDate(d.getDate() + n);
   return formatDate(d);
 }
@@ -4078,7 +4090,7 @@ function collectDailySeries(field, days) {
   const out = [];
   for (let i = days - 1; i >= 0; i--) {
     const ds = addDaysStr(currentDateStr, -i);
-    const d = new Date(ds);
+    const d = parseLocalDate(ds);
     const log = state.holisticLogs[ds] || {};
     out.push({
       label: `${d.getDate()}`,
@@ -4271,7 +4283,7 @@ function collectCalorieSeries(days) {
   const out = [];
   for (let i = days - 1; i >= 0; i--) {
     const ds = addDaysStr(currentDateStr, -i);
-    const d = new Date(ds);
+    const d = parseLocalDate(ds);
     const total = state.diet
       .filter(f => f.date === ds)
       .reduce((s, f) => s + (f.calories || 0), 0);
@@ -4456,7 +4468,7 @@ function computeFitnessFatigue(tailDays = 28) {
     ctl = ctl + (load - ctl) * ctlK;
     atl = atl + (load - atl) * atlK;
     if (i < tailDays) {
-      const d = new Date(ds);
+      const d = parseLocalDate(ds);
       out.push({ label: `${d.getDate()}`, ctl, atl, form: prevCtl - prevAtl });
     }
   }
@@ -4798,7 +4810,7 @@ function renderWeeklyLoadChart() {
   const startIndex = {};
   for (let i = WEEKS - 1; i >= 0; i--) {
     const start = addDaysStr(thisMonday, -i * 7);
-    const d = new Date(start);
+    const d = parseLocalDate(start);
     weeks.push({ start, label: `${d.getDate()}/${d.getMonth() + 1}`, totals: { run: 0, bike: 0, swim: 0, fitness: 0 } });
   }
   weeks.forEach((w, idx) => { startIndex[w.start] = idx; });
