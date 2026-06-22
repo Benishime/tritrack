@@ -14,7 +14,7 @@
   <link rel="manifest" href="manifest.json">
 
   <!-- CSS -->
-  <link rel="stylesheet" href="styles.css?v=1.39">
+  <link rel="stylesheet" href="styles.css?v=1.40">
 </head>
 
 <body class="theme-auto">
@@ -73,28 +73,38 @@
 
         <!-- Bütünsel Parametreler (Uyku, HRV, Kilo) -->
         <div class="card holistic-card no-press">
-          <div class="card-title">🩺 Günlük Vücut Durumu</div>
-          <div class="grid-2 mt-3">
-            <div class="form-group">
-              <label class="form-label" for="input-sleep">Uyku (saat)</label>
-              <input class="form-control" type="number" id="input-sleep" min="0" max="24" step="0.5" placeholder="7.5">
-            </div>
-            <div class="form-group">
-              <label class="form-label" for="input-sleep-score">Uyku Puanı (0–100)</label>
-              <input class="form-control" type="number" id="input-sleep-score" min="0" max="100" step="1"
-                placeholder="85">
-            </div>
-            <div class="form-group">
-              <label class="form-label" for="input-hrv">HRV (ms)</label>
-              <input class="form-control" type="number" id="input-hrv" min="0" max="250" placeholder="65">
-            </div>
-            <div class="form-group">
-              <label class="form-label" for="input-weight">Kilo (kg)</label>
-              <input class="form-control" type="number" id="input-weight" min="30" max="200" step="0.1"
-                placeholder="75.0">
-            </div>
+          <div class="card-title" id="holistic-title">🩺 Günlük Vücut Durumu</div>
+
+          <!-- Kayıt sonrası kompakt özet (veri girilmişse) -->
+          <div id="holistic-summary" style="display:none;">
+            <div id="holistic-summary-values" class="holistic-summary-values"></div>
+            <button id="edit-holistic-btn" class="btn btn-ghost btn-full mt-2" style="font-size:13px;">✏️ Düzenle</button>
           </div>
-          <button id="save-holistic-btn" class="btn btn-secondary btn-full mt-1">Vücut Durumunu Kaydet</button>
+
+          <!-- Giriş formu (veri yoksa veya Düzenle'ye basılınca) -->
+          <div id="holistic-form">
+            <div class="grid-2 mt-3">
+              <div class="form-group">
+                <label class="form-label" for="input-sleep">Uyku (saat)</label>
+                <input class="form-control" type="number" id="input-sleep" min="0" max="24" step="0.5" placeholder="7.5">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="input-sleep-score">Uyku Puanı (0–100)</label>
+                <input class="form-control" type="number" id="input-sleep-score" min="0" max="100" step="1"
+                  placeholder="85">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="input-hrv">HRV (ms)</label>
+                <input class="form-control" type="number" id="input-hrv" min="0" max="250" placeholder="65">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="input-weight">Kilo (kg)</label>
+                <input class="form-control" type="number" id="input-weight" min="30" max="200" step="0.1"
+                  placeholder="75.0">
+              </div>
+            </div>
+            <button id="save-holistic-btn" class="btn btn-secondary btn-full mt-1">Vücut Durumunu Kaydet</button>
+          </div>
         </div>
 
         <!-- Hidrasyon (Su) -->
@@ -666,78 +676,15 @@
           <h2 class="text-xl font-bold">Profil ve Ayarlar</h2>
         </div>
 
-        <!-- ANTRENMAN İÇE AKTARMA (GPX / TCX) -->
-        <div class="card strava-card no-press">
-          <div class="strava-header" style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
-            <span style="font-size:24px;">🟧</span>
-            <h3 class="font-bold text-base">Strava / GPX Antrenman İçe Aktar</h3>
-          </div>
-          <p class="text-sm text-secondary">Strava, Garmin, Polar veya herhangi bir saatten indirdiğin
-            <strong>.gpx</strong> / <strong>.tcx</strong> dosyalarını yükle; mesafe, süre ve nabız otomatik aktarılsın.
-          </p>
-
-          <button id="workout-import-btn" type="button" class="btn btn-primary btn-full mt-3" style="padding:12px;">📥
-            GPX / TCX Dosyası Seç</button>
-          <input type="file" id="workout-import-input" accept=".gpx,.tcx,application/gpx+xml,application/xml,text/xml"
-            multiple style="display:none;">
-          <div id="workout-import-status" class="text-xs text-muted mt-2 text-center"></div>
-
-          <details style="margin-top:12px;">
-            <summary class="text-xs text-secondary" style="cursor:pointer;">Huawei saat / Strava'dan dosya nasıl alınır?
-            </summary>
-            <div class="text-xs text-muted" style="margin-top:8px; line-height:1.6;">
-              <strong>Huawei saat:</strong> Huawei Health → Ben → Üçüncü taraf uygulamalar → <strong>Strava</strong>'yı
-              bağla
-              (bölgen kapalıysa desteklenen ülke Huawei ID'si). Ya da antrenmanı aç → rota → <strong>GPX/TCX dışa
-                aktar</strong>.<br>
-              <strong>Tek antrenman:</strong> strava.com → antrenmanı aç → <strong>"..."</strong> → <strong>"GPX Olarak
-                Dışa Aktar"</strong>.<br>
-              <strong>Tüm geçmiş:</strong> Strava → Ayarlar → <strong>"Verilerini İndir"</strong> → arşivdeki
-              <strong>activities</strong> klasörü.
-            </div>
-          </details>
+        <!-- Alt sayfa geçişi (Verilerim / Ayarlar / Strava) -->
+        <div class="diet-segment" id="profile-segment">
+          <button type="button" class="diet-segment-btn active" data-ppane="verilerim">📊 Verilerim</button>
+          <button type="button" class="diet-segment-btn" data-ppane="ayarlar">⚙️ Ayarlar</button>
+          <button type="button" class="diet-segment-btn" data-ppane="strava">🔄 Strava</button>
         </div>
 
-        <!-- ANTRENMAN İÇE AKTARMA (CANLI STRAVA SENKRONU) -->
-        <div class="card strava-card no-press">
-          <div class="strava-header" style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
-            <span style="font-size:24px;">🔄</span>
-            <h3 class="font-bold text-base">Strava Canlı Senkron (otomatik)</h3>
-          </div>
-          <p class="text-sm text-secondary">Bir kez bağla, sonra tek dokunuşla son antrenmanlarını çek. Kurulum için
-            <strong>STRAVA-KURULUM.md</strong>.</p>
-
-          <div class="form-group mt-3">
-            <label class="form-label" for="strava-proxy-input">Strava Proxy URL'si</label>
-            <input class="form-control" type="url" id="strava-proxy-input" placeholder="https://...workers.dev">
-          </div>
-
-          <div class="grid-2 mt-2">
-            <button id="strava-connect-btn" type="button" class="btn btn-primary" style="padding:10px;">🟧 Strava'yı
-              Bağla</button>
-            <button id="strava-sync-btn" type="button" class="btn btn-secondary" style="padding:10px;" disabled>⬇️ Son
-              antrenmanları çek</button>
-          </div>
-          <div id="strava-status" class="text-xs text-muted mt-2 text-center"></div>
-        </div>
-
-        <!-- HESAP (Supabase auth açıksa görünür) -->
-        <div id="account-card" class="card no-press" style="display:none;">
-          <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
-            <div style="display:flex; align-items:center; gap:10px;">
-              <span style="font-size:24px;">👤</span>
-              <div>
-                <div class="font-bold text-base">Hesap</div>
-                <div id="account-email" class="text-xs text-muted">—</div>
-              </div>
-            </div>
-            <button id="account-signout-btn" type="button" class="btn btn-ghost"
-              style="padding:8px 12px; font-size:12px; color:#ef4444; border-color:rgba(239,68,68,0.3);">Çıkış
-              Yap</button>
-          </div>
-        </div>
-
-        <!-- 3. PROFILE SETTINGS -->
+        <!-- ALT SAYFA 1: VERİLERİM -->
+        <div class="profile-pane active" id="ppane-verilerim">
         <div class="card settings-card no-press">
           <h3 class="font-bold text-base mb-3">Profil ve Hedef Ayarları</h3>
           <form id="form-settings">
@@ -802,8 +749,10 @@
             </div>
             <button type="button" id="estimate-thresholds-btn" class="btn btn-secondary btn-full"
               style="font-size:13px; margin-top:2px;">📈 Verilerimden otomatik tahmin et</button>
-            <span class="text-xs text-muted" style="display:inline-block; font-size:10px; margin-top:6px;">Antrenman
-              geçmişinden eşikleri doldurur; kontrol edip aşağıdan "Ayarları Kaydet"e bas.</span>
+            <button type="button" id="save-thresholds-btn" class="btn btn-primary btn-full"
+              style="font-size:13px; margin-top:8px;">💾 Eşikleri Kaydet</button>
+            <span class="text-xs text-muted" style="display:inline-block; font-size:10px; margin-top:6px;">Sadece
+              performans eşiklerini kaydeder (maxHR, RHR, LTHR, FTP, eşik tempo).</span>
             <div class="grid-3">
               <div class="form-group">
                 <label class="form-label" for="settings-p-target">Protein (g)</label>
@@ -819,9 +768,32 @@
               </div>
             </div>
 
-            <div style="height:1px; background-color: var(--card-border); margin: 16px 0;"></div>
+            <button type="submit" class="btn btn-secondary btn-full mt-2">Ayarları Kaydet</button>
+          </form>
+        </div>
 
-            <h4 class="font-semibold text-sm" style="margin-bottom:8px;">🤖 AI Koç (Bulut Modu)</h4>
+        <!-- VERİ YÖNETİMİ (YEDEKLEME / GERİ YÜKLEME) -->
+        <div class="card data-management-card no-press">
+          <h3 class="font-bold text-base mb-3">💾 Veri Yönetimi</h3>
+          <p class="text-sm text-secondary" style="margin-bottom:14px;">Tüm verileriniz (antrenman, diyet, plan ve
+            profil) yalnızca bu cihazda saklanır. Veri kaybını önlemek ve cihaz değiştirdiğinizde taşımak için düzenli
+            yedek alın.</p>
+          <div class="grid-2">
+            <button id="export-data-btn" type="button" class="btn btn-secondary" style="padding:10px;">📤 Dışa
+              Aktar</button>
+            <button id="import-data-btn" type="button" class="btn btn-secondary" style="padding:10px;">📥 İçe
+              Aktar</button>
+          </div>
+          <input type="file" id="import-file-input" accept="application/json,.json" style="display:none;">
+          <button id="reset-data-btn" type="button" class="btn btn-ghost btn-full mt-3"
+            style="padding:10px; color:#ef4444; border-color: rgba(239,68,68,0.3);">🗑️ Tüm Verileri Sıfırla</button>
+        </div>
+        </div><!-- /ppane-verilerim -->
+
+        <!-- ALT SAYFA 2: AYARLAR -->
+        <div class="profile-pane" id="ppane-ayarlar">
+          <div class="card settings-card no-press">
+            <h3 class="font-bold text-base mb-3">🤖 AI Koç (Bulut Modu)</h3>
             <div class="grid-2">
               <div class="form-group">
                 <label class="form-label" for="settings-ai-provider">Sağlayıcı</label>
@@ -841,27 +813,50 @@
               <input class="form-control" type="password" id="settings-ai-key" placeholder="API anahtarını gir">
               <span class="text-xs text-muted mt-1" style="display:inline-block; font-size:10px;">Anahtar cihazında (localStorage) saklanır, buluta gönderilmez. Model boşsa varsayılan kullanılır (Gemini Pro için <em>gemini-3.5-pro</em> yazabilirsin). Sohbetten otomatik kayıt yalnız Gemini'de çalışır; Claude/OpenAI tavsiye verir.</span>
             </div>
-
-            <button type="submit" class="btn btn-secondary btn-full mt-2">Ayarları Kaydet</button>
-          </form>
-        </div>
-
-        <!-- 4. VERİ YÖNETİMİ (YEDEKLEME / GERİ YÜKLEME) -->
-        <div class="card data-management-card no-press">
-          <h3 class="font-bold text-base mb-3">💾 Veri Yönetimi</h3>
-          <p class="text-sm text-secondary" style="margin-bottom:14px;">Tüm verileriniz (antrenman, diyet, plan ve
-            profil) yalnızca bu cihazda saklanır. Veri kaybını önlemek ve cihaz değiştirdiğinizde taşımak için düzenli
-            yedek alın.</p>
-          <div class="grid-2">
-            <button id="export-data-btn" type="button" class="btn btn-secondary" style="padding:10px;">📤 Dışa
-              Aktar</button>
-            <button id="import-data-btn" type="button" class="btn btn-secondary" style="padding:10px;">📥 İçe
-              Aktar</button>
+            <button type="button" id="save-ai-btn" class="btn btn-secondary btn-full mt-2">AI Ayarlarını Kaydet</button>
           </div>
-          <input type="file" id="import-file-input" accept="application/json,.json" style="display:none;">
-          <button id="reset-data-btn" type="button" class="btn btn-ghost btn-full mt-3"
-            style="padding:10px; color:#ef4444; border-color: rgba(239,68,68,0.3);">🗑️ Tüm Verileri Sıfırla</button>
-        </div>
+
+          <!-- HESAP (Supabase auth açıksa görünür) -->
+          <div id="account-card" class="card no-press" style="display:none;">
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+              <div style="display:flex; align-items:center; gap:10px;">
+                <span style="font-size:24px;">👤</span>
+                <div>
+                  <div class="font-bold text-base">Hesap</div>
+                  <div id="account-email" class="text-xs text-muted">—</div>
+                </div>
+              </div>
+              <button id="account-signout-btn" type="button" class="btn btn-ghost"
+                style="padding:8px 12px; font-size:12px; color:#ef4444; border-color:rgba(239,68,68,0.3);">Çıkış
+                Yap</button>
+            </div>
+          </div>
+        </div><!-- /ppane-ayarlar -->
+
+        <!-- ALT SAYFA 3: STRAVA SENKRON -->
+        <div class="profile-pane" id="ppane-strava">
+          <div class="card strava-card no-press">
+            <div class="strava-header" style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
+              <span style="font-size:24px;">🔄</span>
+              <h3 class="font-bold text-base">Strava Canlı Senkron (otomatik)</h3>
+            </div>
+            <p class="text-sm text-secondary">Bir kez bağla, sonra tek dokunuşla son antrenmanlarını çek. Kurulum için
+              <strong>STRAVA-KURULUM.md</strong>.</p>
+
+            <div class="form-group mt-3">
+              <label class="form-label" for="strava-proxy-input">Strava Proxy URL'si</label>
+              <input class="form-control" type="url" id="strava-proxy-input" placeholder="https://...workers.dev">
+            </div>
+
+            <div class="grid-2 mt-2">
+              <button id="strava-connect-btn" type="button" class="btn btn-primary" style="padding:10px;">🟧 Strava'yı
+                Bağla</button>
+              <button id="strava-sync-btn" type="button" class="btn btn-secondary" style="padding:10px;" disabled>⬇️ Son
+                antrenmanları çek</button>
+            </div>
+            <div id="strava-status" class="text-xs text-muted mt-2 text-center"></div>
+          </div>
+        </div><!-- /ppane-strava -->
 
       </section>
 
@@ -975,14 +970,6 @@
             d="M22,18A4,4 0 0,1 18,22H14A4,4 0 0,1 10,18V16H22V18M2,16H8V22H6A4,4 0 0,1 2,18V16M12,2A8,8 0 0,1 20,10V14H4V10A8,8 0 0,1 12,2M12,4A6,6 0 0,0 6,10H18A6,6 0 0,0 12,4Z" />
         </svg>
         <span>Diyet</span>
-      </button>
-
-      <button class="bottom-nav-item" data-view="log">
-        <svg viewBox="0 0 24 24" width="22" height="22">
-          <path fill="currentColor"
-            d="M17,14H19V17H22V19H19V22H17V19H14V17H17V14M12.8,5.15C12.45,5.15 12.1,5.3 11.85,5.55L4.7,12.7C4.2,13.2 4.2,14 4.7,14.5L9.5,19.3C10,19.8 10.8,19.8 11.3,19.3L18.45,12.15C18.7,11.9 18.85,11.55 18.85,11.2C18.85,10.85 18.7,10.5 18.45,10.25L13.75,5.55C13.5,5.3 13.15,5.15 12.8,5.15M12.8,7.28L16.73,11.2L11.3,16.63L7.38,12.7L12.8,7.28Z" />
-        </svg>
-        <span>Antrenman</span>
       </button>
 
       <button class="bottom-nav-item" data-view="analysis">
@@ -1372,9 +1359,9 @@
   </div>
 
   <!-- Javascripts -->
-  <script src="supabase.min.js?v=1.39"></script>
-  <script src="foods.js?v=1.39"></script>
-  <script src="app.js?v=1.39"></script>
+  <script src="supabase.min.js?v=1.40"></script>
+  <script src="foods.js?v=1.40"></script>
+  <script src="app.js?v=1.40"></script>
 </body>
 
 </html>

@@ -1501,6 +1501,20 @@ button#theme-toggle {
 .diet-pane { display: none; }
 .diet-pane.active { display: block; }
 
+/* Profil alt sayfa panelleri (segment ile geçiş) */
+@keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+.profile-pane { display: none; }
+.profile-pane.active { display: block; animation: fadeIn 0.18s ease; }
+
+/* Vücut Durumu kompakt özet */
+.holistic-summary-values {
+  margin-top: 10px;
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+.holistic-summary-values b { color: var(--text-primary); font-weight: 700; }
+
 /* Hafta navigasyonu */
 .week-nav {
   display: flex;

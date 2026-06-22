@@ -9,7 +9,26 @@ Bu dosya, uygulamada adım adım yapılan geliştirmeleri kaydeder. Sonradan dö
 > - `index.html` içindeki `?v=1.X` (css + js linkleri)
 > - `sw.js` içindeki `CACHE_NAME = 'tritrack-vX'`
 >
-> **Son sürüm:** `?v=1.34` · `tritrack-v34`
+> **Son sürüm:** `?v=1.40` · `tritrack-v40`
+
+---
+
+## ✅ UX sadeleştirme: nav + profil alt sayfaları + vücut durumu özeti (v1.40)
+
+- **Nav bar:** Alt menüden **Antrenman (log)** sekmesi kaldırıldı (5 sekme: Bugün/Program/Diyet/Analiz/Asistan).
+  Antrenman kaydı hâlâ Bugün'deki "Antrenman Kaydet" butonu, hızlı-kaydet ve plan düzenleme akışlarından açılıyor.
+  Yeni `navigateToView(viewName)` yardımcısı eklendi — nav butonu olmayan görünümlere de (log) programatik geçiş
+  için. Eski `.bottom-nav [data-view="log"]').click()` çağrıları buna taşındı.
+- **Vücut Durumu kartı:** O günün verisi girilmişse form gizlenir, yerine **kompakt özet** (Uyku · Puan · HRV · Kilo)
+  + başlıkta ✅ + **✏️ Düzenle** butonu gösterilir. Düzenle → form geri gelir (`holisticEditMode`, `renderHolisticCard`).
+  Tarih değişince/kayıttan sonra otomatik özet görünümüne döner.
+- **Performans Eşikleri:** Bölüme **💾 Eşikleri Kaydet** butonu eklendi (`save-thresholds-btn`) — sayfanın altına
+  inmeden yalnız eşik alanlarını (maxHR/RHR/LTHR/FTP/eşik tempo) kaydeder.
+- **Profil sayfası 3 alt sayfaya bölündü** (diyet segment tasarımıyla): **📊 Verilerim** (profil+hedef formu + veri
+  yönetimi), **⚙️ Ayarlar** (AI koç ayarları + hesap), **🔄 Strava** (canlı senkron). AI bloğu formdan çıkarılıp kendi
+  **AI Ayarlarını Kaydet** (`save-ai-btn`) butonuna kavuştu. Segment geçişi `.profile-pane`/`#profile-segment`.
+- **GPX/TCX içe aktarma kaldırıldı:** Profilden kart + `initWorkoutImport()` çağrısı çıkarıldı (canlı Strava senkronu
+  yeterli). `addImportedWorkout`/`haversine`/`guessSport`/pace yardımcıları korundu (senkron kullanıyor).
 
 ---
 
