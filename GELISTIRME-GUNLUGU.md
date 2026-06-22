@@ -9,7 +9,75 @@ Bu dosya, uygulamada adım adım yapılan geliştirmeleri kaydeder. Sonradan dö
 > - `index.html` içindeki `?v=1.X` (css + js linkleri)
 > - `sw.js` içindeki `CACHE_NAME = 'tritrack-vX'`
 >
-> **Son sürüm:** `?v=1.23` · `tritrack-v23`
+> **Son sürüm:** `?v=1.30` · `tritrack-v30`
+
+---
+
+## ✅ Profesyonel sürüm: B grubu (hedef & motivasyon)
+
+- **B1 · Hedef yarış + geri sayım:** Ayarlar'a `raceName`/`raceDate`; Bugün'de "🏁 N gün kaldı" kartı +
+  faz önerisi (Base/Build/Peak/Taper, gerçek bugüne göre). `renderRaceCard`.
+- **B2 · Ay takvimi:** Program'a aylık takvim (◀ ▶), günlerde sporda renkli noktalar (dolu=yapılan, soluk=planlı),
+  güne dokun → o güne plan ekle. `renderCalendar`/`shiftCalendarMonth` (`mondayOf`/`SPORT_META` deseni).
+- **B3 · Antrenman şablonları:** plan modalında "⭐ şablon olarak kaydet" + "Şablonlarım" çipleri (dokun→formu doldur,
+  ×→sil). `state.templates` (normalizeState'e eklendi → yedek/senkronda korunur). `saveWorkoutTemplate`/`renderPlanTemplates`.
+- **B4 · Streak + haftalık recap:** Bugün sonunda 🔥 ardışık gün serisi + bu haftanın özeti (antrenman/süre/mesafe/TSS). `renderStreakRecap`.
+
+> Tümü mevcut Bugün/Program/Ayar altyapısına eklendi; yeni `profile`/`state` alanları opsiyonel (migrasyon yok).
+
+---
+
+---
+
+## ✅ Profesyonel sürüm: A (çekirdek antrenman) + C (beslenme/toparlanma) grupları
+
+Checklist'teki A ve C grupları tamamlandı (plan: "Profesyonel Sürüm").
+
+**A — Çekirdek antrenman döngüsü**
+- **A1 · Antrenman detay ekranı + HR/GPS izi:** `parseGPX` artık ≤120 noktalık `track` (hr/lat/lon) saklıyor
+  (`addImportedWorkout` → `workout.track`). Bugün'de antrenman kartına dokununca **detay modalı** (`#workout-detail-modal`,
+  `openWorkoutDetail`): özet+TSS/IF, **nabız grafiği** (`buildLineChartSVG`), **bölgede süre**, **mini rota** (`buildRouteSVG`).
+- **A2 · TSS + IF + ACWR:** `workoutIF` (bisiklet güç/FTP, koşu tempo/eşik, genel HR/LTHR) + `workoutLoad` (TSS ölçeği:
+  saat×IF²×100; eşik yoksa RPE/10). `dailyLoadOn` artık TSS topluyor → CTL/ATL/Form TSS bazlı. `computeAcwr` (akut7g/kronik)
+  → Form kartında sakatlık/yüklenme uyarısı.
+- **A3 · Branşa göre bölgeler:** `ifZone` + `workoutZone` (güç/tempo/HR). "Nabız Bölgeleri" → **"Yoğunluk Bölgeleri (HR/güç/tempo)"**.
+
+**C — Beslenme & toparlanma**
+- **C1 · Hidrasyon:** Bugün'de 💧 Su kartı (250ml bardak, hedef 2500ml, `holisticLogs[date].water`).
+- **C2 · Kilo hedefi:** Ayarlar'a `weightGoal`; kilo trendinde "hedefe X kg · ~Y hafta" projeksiyonu.
+- **C3 · Yakıtlama:** ≥90 dk seans olan günlerde Bugün'de ⛽ öneri kartı (sırasında 60–90g/sa karb + kg'ye göre toparlanma).
+
+> Yeni `profile` alanları (RHR/LTHR/FTP/eşik tempo/weightGoal) opsiyonel → migrasyon yok; Supabase senkron + yedeklemede korunur.
+> `track` downsample'lı (~3-4KB/seans) saklanır. Eşikleri "📈 Verilerimden tahmin et" ile geçmişten doldurabilirsin.
+
+---
+
+## ✅ Profesyonel P1 (dilim 1): Performans eşikleri + LTHR tabanlı nabız bölgeleri
+
+Sporcuya özel zone'ların temeli atıldı (plan: "Profesyonel Sürüm" P1.1 + P1.2 ilk dilim).
+
+- **Yeni profil alanları** (Ayarlar → "🎯 Performans Eşikleri", hepsi opsiyonel): **RHR, LTHR (eşik nabzı),
+  FTP (watt), eşik tempo (dk/km)**. `state.profile.{restingHr,lthr,ftp,thresholdPace}`; `initProfileView`
+  load/save. Opsiyonel → migrasyon yok; Supabase senkronda korunur (secret değil), yedeklemede de.
+- **Nabız bölgeleri artık LTHR'a göre:** `hrZoneOfLthr` (Friel benzeri 5 bölge: <81/81-90/90-94/94-100/≥100%).
+  `renderHrZones` LTHR girilmişse onu, yoksa eski %maxHR'ı kullanır; glance "(LTHR 165)" / "(maxHR 190)" basisini
+  ve düşük-yoğunluk (Z1–Z2) yüzdesini gösterir; LTHR yoksa "LTHR gir" ipucu.
+- FTP/eşik tempo şimdilik yalnız saklanıyor; sonraki dilimde güç-zone'ları, koşu tempo-zone'ları ve TSS/ACWR.
+
+---
+
+## ✅ UX Cilası (1): confirm() → uygulama-içi onay modalı (ux_report 3.1)
+
+Çirkin/tutarsız tarayıcı `confirm()` pencereleri kalktı; yerine şık, temalı bir modal geldi (premium his).
+
+- **Altyapı:** `#confirm-overlay` ([index.html](index.html)) + `.confirm-*` stilleri ([styles.css](styles.css)) +
+  `showConfirm(message, {title, okText, cancelText, danger})` → **Promise<boolean>** ([app.js](app.js), showToast yanında).
+  Mesaj `textContent` ile basılır (enjeksiyon yok), `white-space: pre-line` ile `\n` satır sonları korunur.
+  Overlay/ESC ile iptal; DOM yoksa `window.confirm`'e güvenli yedek.
+- **9 çağrı dönüştürüldü** (hepsi `await showConfirm`): antrenman/plan/diyet-planı silme, tüm haftaya uygula,
+  yedek geri yükleme, tüm veriyi sıfırla (çift onay), çıkış, misafir→hesap veri taşıma. İçeren callback/fonksiyonlar
+  `async` yapıldı; silme/sıfırlama onayları `danger:true` (kırmızı buton).
+- `alert()`'ler zaten daha önce toast'a çevrilmişti; artık ham tarayıcı diyaloğu kalmadı.
 
 ---
 
