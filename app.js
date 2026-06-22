@@ -1356,7 +1356,7 @@ function renderProgramView() {
             <strong>${sportIcons[plan.sport]} ${plan.details || 'Plan'}</strong>
             ${plan.targetDistance ? `<span>(${plan.targetDistance}km)</span>` : ''}
           </div>
-          <button class="delete-plan-btn" style="border:none; background:none; cursor:pointer; font-size:14px; font-weight:bold;" data-id="${plan.id}">&times;</button>
+          <button class="delete-plan-btn" style="border:none; background:none; cursor:pointer; font-size:22px; line-height:1; font-weight:bold; color:#ef4444; padding:2px 10px;" data-id="${plan.id}" title="Planı sil">&times;</button>
         `;
 
         planEl.querySelector('.delete-plan-btn').addEventListener('click', async (e) => {
