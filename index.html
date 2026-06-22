@@ -14,7 +14,7 @@
   <link rel="manifest" href="manifest.json">
 
   <!-- CSS -->
-  <link rel="stylesheet" href="styles.css?v=1.33">
+  <link rel="stylesheet" href="styles.css?v=1.34">
 </head>
 
 <body class="theme-auto">
@@ -821,11 +821,25 @@
 
             <div style="height:1px; background-color: var(--card-border); margin: 16px 0;"></div>
 
+            <h4 class="font-semibold text-sm" style="margin-bottom:8px;">🤖 AI Koç (Bulut Modu)</h4>
+            <div class="grid-2">
+              <div class="form-group">
+                <label class="form-label" for="settings-ai-provider">Sağlayıcı</label>
+                <select class="form-control form-select" id="settings-ai-provider">
+                  <option value="gemini">Google Gemini</option>
+                  <option value="claude">Anthropic Claude</option>
+                  <option value="openai">OpenAI GPT</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="settings-ai-model">Model</label>
+                <input class="form-control" type="text" id="settings-ai-model" placeholder="gemini-3.5-flash">
+              </div>
+            </div>
             <div class="form-group">
-              <label class="form-label" for="settings-gemini-key">Google Gemini API Key (Bulut Modu İçin)</label>
-              <input class="form-control" type="password" id="settings-gemini-key" placeholder="API Anahtarınızı girin">
-              <span class="text-xs text-muted mt-1" style="display:inline-block; font-size:10px;">Gemini API anahtarı
-                tarayıcınızda (localStorage) saklanır, hiçbir sunucuya gönderilmez.</span>
+              <label class="form-label" for="settings-ai-key"><span id="settings-ai-key-label">Gemini</span> API Anahtarı</label>
+              <input class="form-control" type="password" id="settings-ai-key" placeholder="API anahtarını gir">
+              <span class="text-xs text-muted mt-1" style="display:inline-block; font-size:10px;">Anahtar cihazında (localStorage) saklanır, buluta gönderilmez. Model boşsa varsayılan kullanılır (Gemini Pro için <em>gemini-3.5-pro</em> yazabilirsin). Sohbetten otomatik kayıt yalnız Gemini'de çalışır; Claude/OpenAI tavsiye verir.</span>
             </div>
 
             <button type="submit" class="btn btn-secondary btn-full mt-2">Ayarları Kaydet</button>
@@ -1358,9 +1372,9 @@
   </div>
 
   <!-- Javascripts -->
-  <script src="supabase.min.js?v=1.33"></script>
-  <script src="foods.js?v=1.33"></script>
-  <script src="app.js?v=1.33"></script>
+  <script src="supabase.min.js?v=1.34"></script>
+  <script src="foods.js?v=1.34"></script>
+  <script src="app.js?v=1.34"></script>
 </body>
 
 </html>
