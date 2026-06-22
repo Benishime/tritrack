@@ -4640,10 +4640,31 @@ function openWorkoutDetail(w) {
   if (w.notes) html += `<p class="text-sm text-muted" style="margin-top:12px; font-style:italic;">"${escapeHtml(w.notes)}"</p>`;
   if (track.length === 0) html += `<p class="text-xs text-muted" style="margin-top:12px;">Detaylı iz (HR/GPS) yok. GPX içe aktarılan seanslarda nabız grafiği + rota görünür.</p>`;
 
+  html += `<div style="display:flex; gap:8px; margin-top:16px;">
+    <button id="wd-edit" class="btn btn-secondary" style="flex:1; padding:10px;">✏️ Düzenle</button>
+    <button id="wd-delete" class="btn btn-ghost" style="flex:1; padding:10px; color:#ef4444; border-color:rgba(239,68,68,0.3);">🗑️ Sil</button>
+  </div>`;
+
   document.getElementById('wd-body').innerHTML = html;
   const close = () => modal.classList.remove('open');
   document.getElementById('wd-close').onclick = close;
   modal.onclick = (e) => { if (e.target === modal) close(); };
+
+  document.getElementById('wd-edit').onclick = () => { close(); startEditWorkout(w); };
+  document.getElementById('wd-delete').onclick = async () => {
+    if (await showConfirm('Bu antrenman kaydını silmek istediğine emin misin?', { title: 'Antrenmanı sil', okText: 'Sil', danger: true })) {
+      state.workouts = state.workouts.filter(x => x.id !== w.id);
+      // Bu kayda bağlı plan tamamlanmasını geri al (plan tekrar yapılacaklara dönsün)
+      state.plans.forEach(pl => { if (pl.loggedWorkoutId === w.id) { pl.completed = false; delete pl.loggedWorkoutId; } });
+      saveState();
+      close();
+      renderTodayView();
+      const av = document.querySelector('.bottom-nav-item.active');
+      if (av && typeof refreshActiveView === 'function') refreshActiveView(av.getAttribute('data-view'));
+      showToast('Antrenman silindi.');
+    }
+  };
+
   modal.classList.add('open');
 }
 
