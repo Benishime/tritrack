@@ -378,6 +378,21 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
+// Programatik görünüm geçişi (nav butonu olmayan görünümler için de çalışır, örn. 'log').
+function navigateToView(viewName) {
+  const navItems = document.querySelectorAll('.bottom-nav .bottom-nav-item');
+  const views = document.querySelectorAll('.app-content .view-section');
+  const profileBtn = document.getElementById('profile-open-btn');
+  if (profileBtn) profileBtn.classList.remove('active');
+  navItems.forEach(nav => nav.classList.remove('active'));
+  const targetNav = document.querySelector(`.bottom-nav [data-view="${viewName}"]`);
+  if (targetNav) targetNav.classList.add('active');
+  else if (viewName === 'profile' && profileBtn) profileBtn.classList.add('active');
+  const targetViewId = `view-${viewName}`;
+  views.forEach(view => view.classList.toggle('active', view.id === targetViewId));
+  refreshActiveView(viewName);
+}
+
 function initNavigation() {
   const navItems = document.querySelectorAll('.bottom-nav .bottom-nav-item');
   const views = document.querySelectorAll('.app-content .view-section');
@@ -520,13 +535,20 @@ function initTodayView() {
     }
 
     saveState();
+    holisticEditMode = false; // kayıttan sonra özet görünümüne dön
     showToast("Vücut durumu başarıyla kaydedildi!");
+    renderTodayView();
+  });
+
+  const editHolisticBtn = document.getElementById('edit-holistic-btn');
+  if (editHolisticBtn) editHolisticBtn.addEventListener('click', () => {
+    holisticEditMode = true;
     renderTodayView();
   });
 
   document.getElementById('quick-add-plan-btn').addEventListener('click', () => openPlanModal(currentDateStr));
   document.getElementById('go-to-log-btn').addEventListener('click', () => {
-    document.querySelector('.bottom-nav [data-view="log"]').click();
+    navigateToView('log');
   });
 
   const waterAdd = document.getElementById('water-add-btn');
@@ -638,7 +660,36 @@ function changeCurrentDate(daysOffset) {
   const d = parseLocalDate(currentDateStr);
   d.setDate(d.getDate() + daysOffset);
   currentDateStr = formatDate(d);
+  holisticEditMode = false; // tarih değişince özet görünümüne dön
   renderTodayView();
+}
+
+// Vücut Durumu kartı: veri girilmişse kompakt özet, yoksa/düzenlemede form göster.
+let holisticEditMode = false;
+function renderHolisticCard(bodyLog) {
+  const summary = document.getElementById('holistic-summary');
+  const form = document.getElementById('holistic-form');
+  const title = document.getElementById('holistic-title');
+  if (!summary || !form) return;
+
+  const hasData = bodyLog && (bodyLog.sleep != null || bodyLog.sleepScore != null ||
+    bodyLog.hrv != null || bodyLog.weight != null);
+
+  if (hasData && !holisticEditMode) {
+    const parts = [];
+    if (bodyLog.sleep != null) parts.push(`Uyku: <b>${bodyLog.sleep} sa</b>`);
+    if (bodyLog.sleepScore != null) parts.push(`Puan: <b>${bodyLog.sleepScore}</b>`);
+    if (bodyLog.hrv != null) parts.push(`HRV: <b>${bodyLog.hrv} ms</b>`);
+    if (bodyLog.weight != null) parts.push(`Kilo: <b>${bodyLog.weight} kg</b>`);
+    document.getElementById('holistic-summary-values').innerHTML = parts.join(' · ');
+    summary.style.display = '';
+    form.style.display = 'none';
+    if (title) title.innerHTML = '🩺 Günlük Vücut Durumu ✅';
+  } else {
+    summary.style.display = 'none';
+    form.style.display = '';
+    if (title) title.innerHTML = '🩺 Günlük Vücut Durumu';
+  }
 }
 
 function renderTodayView() {
@@ -655,6 +706,7 @@ function renderTodayView() {
   document.getElementById('input-sleep-score').value = bodyLog.sleepScore || '';
   document.getElementById('input-hrv').value = bodyLog.hrv || '';
   document.getElementById('input-weight').value = bodyLog.weight || state.profile.weight || '';
+  renderHolisticCard(bodyLog);
 
   // 1. Bugünün Antrenman Plan Listesi — yalnızca YAPILACAKLAR (tamamlananlar "Yapılan"a akar)
   const todayPlansList = document.getElementById('today-plans-list');
@@ -866,7 +918,7 @@ function toggleDietPlanCompleted(plan, isChecked) {
 }
 
 function triggerQuickLog(plan) {
-  document.querySelector('.bottom-nav [data-view="log"]').click();
+  navigateToView('log');
   const tabBtn = document.querySelector(`.sport-tab-btn[data-sport="${plan.sport}"]`);
   if (tabBtn) tabBtn.click();
 
@@ -2530,7 +2582,7 @@ function prefillWorkoutForm(w) {
 
 // Bir antrenmanı düzenlemeye başla: Kaydet sekmesine geçip formu doldur
 function startEditWorkout(w) {
-  document.querySelector('.bottom-nav [data-view="log"]').click(); // resetWorkoutForms çalışır (editingWorkoutId=null)
+  navigateToView('log'); // resetWorkoutForms çalışır (editingWorkoutId=null)
   const tab = document.querySelector(`.sport-tab-btn[data-sport="${w.sport}"]`);
   if (tab) tab.click();
 
@@ -2615,7 +2667,41 @@ function initProfileView() {
   const estBtn = document.getElementById('estimate-thresholds-btn');
   if (estBtn) estBtn.addEventListener('click', applyEstimatedThresholds);
 
-  initWorkoutImport();
+  // Sadece performans eşiklerini kaydet (sayfanın altına inmeden)
+  const saveThrBtn = document.getElementById('save-thresholds-btn');
+  if (saveThrBtn) saveThrBtn.addEventListener('click', () => {
+    const numOrNull = (id) => { const v = parseInt(document.getElementById(id).value); return isNaN(v) ? null : v; };
+    state.profile.maxHr = numOrNull('settings-max-hr');
+    state.profile.restingHr = numOrNull('settings-resting-hr');
+    state.profile.lthr = numOrNull('settings-lthr');
+    state.profile.ftp = numOrNull('settings-ftp');
+    state.profile.thresholdPace = (document.getElementById('settings-threshold-pace').value || '').trim() || null;
+    saveState();
+    showToast('Performans eşikleri kaydedildi ✅');
+  });
+
+  // AI ayarlarını ayrıca kaydet (Ayarlar alt sayfası)
+  const saveAiBtn = document.getElementById('save-ai-btn');
+  if (saveAiBtn) saveAiBtn.addEventListener('click', () => {
+    const aiProv = document.getElementById('settings-ai-provider').value;
+    state.profile.aiProvider = aiProv;
+    state.profile.aiModel = (document.getElementById('settings-ai-model').value || '').trim() || null;
+    state.profile[AI_PROVIDERS[aiProv].keyField] = document.getElementById('settings-ai-key').value;
+    saveState();
+    updateAiBadge();
+    showToast('AI ayarları kaydedildi ✅');
+  });
+
+  // Profil alt sayfa segment geçişi (Verilerim / Ayarlar / Strava)
+  document.querySelectorAll('#profile-segment .diet-segment-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const pane = btn.getAttribute('data-ppane');
+      document.querySelectorAll('#profile-segment .diet-segment-btn')
+        .forEach(b => b.classList.toggle('active', b === btn));
+      document.querySelectorAll('#view-profile .profile-pane')
+        .forEach(p => p.classList.toggle('active', p.id === `ppane-${pane}`));
+    });
+  });
 
   const analyzeBtn = document.getElementById('ai-analyze-btn');
   const sendBtn = document.getElementById('ai-send-btn');
