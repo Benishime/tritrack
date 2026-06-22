@@ -3836,6 +3836,12 @@ function addImportedWorkout(p) {
   if (p.avgHr) workout.hr = p.avgHr;
 
   state.workouts.push(workout);
+
+  // O güne/branşa ait tamamlanmamış planı otomatik tamamla + kayda bağla.
+  // (İçe aktarılan = o günün seansı; aynı branştaki ilk açık planı kapatır. Farklı branş yaptıysan plan açık kalır.)
+  const match = state.plans.find(pl => pl.date === date && pl.sport === workout.sport && !pl.completed);
+  if (match) { match.completed = true; match.loggedWorkoutId = workout.id; }
+
   return 'added';
 }
 
