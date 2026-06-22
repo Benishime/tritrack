@@ -14,7 +14,7 @@
   <link rel="manifest" href="manifest.json">
 
   <!-- CSS -->
-  <link rel="stylesheet" href="styles.css?v=1.32">
+  <link rel="stylesheet" href="styles.css?v=1.33">
 </head>
 
 <body class="theme-auto">
@@ -636,10 +636,10 @@
             <div id="ai-chat-output" class="ai-chat-output"
               style="max-height: 250px; overflow-y: auto; background-color: var(--bg-secondary); border-radius:12px; padding:12px; display:flex; flex-direction:column; gap:10px; font-size:13px; border:1px solid var(--card-border);">
               <div class="ai-message message-bot" style="line-height:1.4;">
-                Merhaba! Ben senin yapay zeka antrenörünüm. **"Analiz Et"** ile rapor alabilir, ya da bana doğrudan
-                yazabilirsin. Artık **senin için kayıt da yapabilirim** — örn. *"bugün 10 km koştum, 7.5 saat uyudum"*
-                dersen onaylaman için öneri çıkarır, sen onaylayınca eklerim. *(Bulut modu için Gemini anahtarı
-                gerekir.)*
+                Ben senin antrenörünüm — **lafı dolandırmam, bahane dinlemem.** Hedefe odaklanırız. **"Analiz Et"**
+                ile durumunu masaya yatırırım; **"Haftalık Plan Öner"** ile programını çıkarırım. Doğrudan da yaz:
+                *"bugün 10 km koştum, 7.5 saat uyudum"* dersen onaylaman için öneri çıkarır, onaylayınca eklerim.
+                *(Tam sertlik + akıllı yanıtlar için Profil → Ayarlar'dan Gemini API anahtarı ekle.)*
               </div>
             </div>
 
@@ -1336,7 +1336,18 @@
             <input class="form-control" type="number" id="ob-fat" min="0">
           </div>
         </div>
-        <p class="ob-hint">💡 Bunları daha sonra Profil sekmesinden değiştirebilirsin.</p>
+
+        <div style="height:1px; background:var(--card-border); margin:14px 0;"></div>
+        <div class="form-group">
+          <label class="form-label" for="ob-race-name">🏁 Hedef Yarışın (varsa)</label>
+          <input class="form-control" type="text" id="ob-race-name" placeholder="örn. İstanbul Maraton" autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="ob-race-date">Yarış Tarihi</label>
+          <input class="form-control" type="date" id="ob-race-date">
+        </div>
+
+        <p class="ob-hint">💡 Bunları daha sonra Profil sekmesinden değiştirebilirsin. Yarış girersen koçun seni o tarihe göre yönlendirir.</p>
       </div>
 
       <div class="onboarding-nav">
@@ -1347,9 +1358,9 @@
   </div>
 
   <!-- Javascripts -->
-  <script src="supabase.min.js?v=1.32"></script>
-  <script src="foods.js?v=1.32"></script>
-  <script src="app.js?v=1.32"></script>
+  <script src="supabase.min.js?v=1.33"></script>
+  <script src="foods.js?v=1.33"></script>
+  <script src="app.js?v=1.33"></script>
 </body>
 
 </html>
