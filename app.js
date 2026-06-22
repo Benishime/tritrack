@@ -2596,6 +2596,13 @@ function initProfileView() {
     generateCoachReport();
   });
 
+  const weeklyReportBtn = document.getElementById('ai-weekly-report-btn');
+  if (weeklyReportBtn) weeklyReportBtn.addEventListener('click', generateWeeklyReport);
+  const weeklyPlanBtn = document.getElementById('ai-weekly-plan-btn');
+  if (weeklyPlanBtn) weeklyPlanBtn.addEventListener('click', () => {
+    handleCoachChat('Hedef yarışıma, güncel formuma (Form/TSB ve ACWR) ve son antrenmanlarıma göre BU HAFTA için dengeli bir antrenman planı oluştur ve haftalikPlanEkle aracıyla ekle. Dinlenme/toparlanma günleri bırak, branşları dengele.');
+  });
+
   sendBtn.addEventListener('click', () => {
     const text = chatInput.value.trim();
     if (text) {
@@ -2778,12 +2785,31 @@ function computeReadiness() {
 }
 
 // Antrenör için tüm bağlamı topla
+// Hedef yarış bilgisi (gün/hafta/faz) — AI bağlamı ve kart için
+function getRaceInfo() {
+  const date = state.profile.raceDate;
+  if (!date) return null;
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const race = new Date(date); race.setHours(0, 0, 0, 0);
+  const days = Math.round((race - today) / 86400000);
+  if (days < 0) return { name: state.profile.raceName || 'Yarış', daysLeft: days, phase: 'geçti' };
+  const weeks = Math.max(1, Math.ceil(days / 7));
+  const phase = weeks > 12 ? 'Base (temel)' : weeks > 4 ? 'Build (geliştirme)' : weeks > 1 ? 'Peak (zirve)' : 'Taper (tazelenme)';
+  return { name: state.profile.raceName || 'Yarış', daysLeft: days, weeks, phase };
+}
+
 function gatherCoachData() {
   const todayDiet = state.diet.filter(f => f.date === currentDateStr);
   const diet = { cal: 0, p: 0, c: 0, f: 0 };
   todayDiet.forEach(f => { diet.cal += f.calories; diet.p += f.protein; diet.c += f.carbs; diet.f += f.fat; });
 
   const thisMon = mondayOf(currentDateStr);
+  const ff = computeFitnessFatigue(1);
+  const acwr = computeAcwr();
+  let weekTss = 0;
+  for (let i = 0; i < 7; i++) weekTss += dailyLoadOn(addDaysStr(thisMon, i));
+  const p = state.profile;
+
   return {
     diet,
     body: state.holisticLogs[currentDateStr] || {},
@@ -2793,6 +2819,11 @@ function gatherCoachData() {
       hrv: avgOf(holisticValues('hrv', 0, 6))
     },
     load: { thisWeek: weekMinutes(thisMon), lastWeek: weekMinutes(addDaysStr(thisMon, -7)) },
+    form: Math.round(ff.form), ctl: Math.round(ff.ctl), atl: Math.round(ff.atl),
+    acwr: acwr != null ? Math.round(acwr * 100) / 100 : null,
+    weekTss: Math.round(weekTss),
+    race: getRaceInfo(),
+    thresholds: { lthr: p.lthr || null, ftp: p.ftp || null, thresholdPace: p.thresholdPace || null, maxHr: p.maxHr || null },
     // Strava sözleşmesi: Strava kaynaklı ham antrenman detayları 3. taraf AI'ya gönderilmez.
     // (Haftalık yük gibi kaba toplamlar gider; ayrıntılı liste yalnız kullanıcının girdiği antrenmanlar.)
     recent: state.workouts.filter(w => w.source !== 'strava').slice().sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 6),
@@ -2816,17 +2847,77 @@ HEDEF: ${p.targetDailyCalories} kcal/gün (P:${p.targetMacros.protein} C:${p.tar
 BUGÜN DİYET: ${Math.round(d.diet.cal)} kcal · P:${Math.round(d.diet.p)}g C:${Math.round(d.diet.c)}g Y:${Math.round(d.diet.f)}g
 BUGÜN VÜCUT: uyku ${d.body.sleep != null ? d.body.sleep : '-'} saat, uyku puanı ${d.body.sleepScore != null ? d.body.sleepScore : '-'}/100, HRV ${d.body.hrv != null ? d.body.hrv : '-'} ms
 7 GÜN ORT.: uyku ${fmtNum(d.avg7.sleep, 1)} saat, uyku puanı ${fmtNum(d.avg7.score, 0)}, HRV ${fmtNum(d.avg7.hrv, 0)} ms
-HAFTALIK YÜK: bu hafta ${d.load.thisWeek} dk, geçen hafta ${d.load.lastWeek} dk
+HAFTALIK YÜK: bu hafta ${d.load.thisWeek} dk (~${d.weekTss} TSS), geçen hafta ${d.load.lastWeek} dk
+FORM & YÜK: Form/TSB ${d.form}, Fitness/CTL ${d.ctl}, Yorgunluk/ATL ${d.atl}${d.acwr != null ? `, ACWR ${d.acwr}` : ''}
 HAZIR OLMA (hesaplanan): ${r ? `${r.label}${r.reasons.length ? ' (' + r.reasons.join(', ') + ')' : ''}` : 'veri yetersiz'}
+${d.race ? `HEDEF YARIŞ: ${d.race.name} — ${d.race.daysLeft >= 0 ? d.race.daysLeft + ' gün (' + d.race.phase + ' dönemi)' : 'geçti'}` : ''}
+${(d.thresholds.lthr || d.thresholds.ftp || d.thresholds.thresholdPace) ? `EŞİKLER: ${[d.thresholds.lthr ? 'LTHR ' + d.thresholds.lthr : '', d.thresholds.ftp ? 'FTP ' + d.thresholds.ftp + 'w' : '', d.thresholds.thresholdPace ? 'eşik tempo ' + d.thresholds.thresholdPace : ''].filter(Boolean).join(', ')}` : ''}
 
 SON ANTRENMANLAR:
 ${recentTxt}
 
 Bu verilere göre kısa, maddeli bir rapor yaz:
 1. Beslenme: hedeflerle uyum (özellikle protein ve karbonhidrat yeterli mi?).
-2. Toparlanma: uyku süresi+puanı ve HRV'ye göre hazır olma, aşırı antrenman riski.
-3. Bugün/yarın önerisi: haftalık yük değişimi ve son RPE'lere göre yoğunluğu artır/azalt.
+2. Toparlanma & yük: uyku/HRV + Form(TSB) + ACWR'ye göre hazır olma ve aşırı yüklenme riski. (ACWR>1.5 ise net uyar; Form çok negatifse dinlenme öner.)
+3. Bugün/yarın önerisi: ${d.race ? 'yarışa kalan süre ve döneme (' + (d.race.phase || '-') + ') uygun, ' : ''}haftalık yük ve son RPE'lere göre yoğunluğu artır/azalt.
 Gereksiz uzatma; doğrudan, uygulanabilir öneriler ver.`;
+}
+
+// Bir haftanın (Pazartesi) özeti
+function weekSummary(mondayStr) {
+  const end = addDaysStr(mondayStr, 6);
+  const wk = state.workouts.filter(w => w.date >= mondayStr && w.date <= end);
+  let sec = 0, km = 0, tss = 0;
+  wk.forEach(w => { sec += w.duration || 0; if (w.sport === 'run' || w.sport === 'bike') km += (w.distance || 0); tss += workoutLoad(w); });
+  return { sessions: wk.length, min: Math.round(sec / 60), km: Math.round(km * 10) / 10, tss: Math.round(tss) };
+}
+
+function weeklyLocalReport(lw, tw, d) {
+  let s = `### 📊 Haftalık Rapor\n\n`;
+  s += `**Geçen hafta:** ${lw.sessions} antrenman · ${lw.min} dk · ${lw.km} km · ${lw.tss} TSS\n`;
+  s += `**Bu hafta:** ${tw.sessions} antrenman · ${tw.tss} TSS\n`;
+  s += `**Form (TSB):** ${d.form}${d.acwr != null ? ` · ACWR ${d.acwr}` : ''}\n\n`;
+  if (d.acwr != null && d.acwr > 1.5) s += `⚠️ ACWR yüksek (${d.acwr}) — yükü birkaç gün hafiflet, sakatlık riski.\n`;
+  else if (d.form > 5) s += `Tazesin; bu hafta kaliteli/yoğun bir seans ekleyebilirsin.\n`;
+  else if (d.form < -15) s += `Form düşük; bu hafta toparlanmaya ağırlık ver.\n`;
+  else s += `Denge iyi; planına devam et, haftalık yükü %10'dan fazla artırma.\n`;
+  return s;
+}
+
+function generateWeeklyReport() {
+  const container = document.getElementById('ai-chat-output');
+  const loader = document.createElement('div');
+  loader.className = 'ai-message message-bot loader-msg';
+  loader.style.padding = '8px 12px';
+  loader.innerHTML = 'Haftalık rapor hazırlanıyor...';
+  container.appendChild(loader);
+  container.scrollTop = container.scrollHeight;
+
+  const p = state.profile;
+  const d = gatherCoachData();
+  const thisMon = mondayOf(currentDateStr);
+  const lw = weekSummary(addDaysStr(thisMon, -7));
+  const tw = weekSummary(thisMon);
+  const apiKey = p.geminiApiKey;
+
+  const prompt = `Sen profesyonel bir antrenörsün. Türkçe, kısa ve maddeli yaz.
+SPORCU: ${p.name}, ${p.weight} kg
+GEÇEN HAFTA: ${lw.sessions} antrenman · ${lw.min} dk · ${lw.km} km · ${lw.tss} TSS
+BU HAFTA (şu ana dek): ${tw.sessions} antrenman · ${tw.min} dk · ${tw.tss} TSS
+FORM: Form/TSB ${d.form}, CTL ${d.ctl}, ATL ${d.atl}${d.acwr != null ? ', ACWR ' + d.acwr : ''}; hazır olma ${d.readiness ? d.readiness.label : '-'}
+${d.race ? `HEDEF YARIŞ: ${d.race.name} — ${d.race.daysLeft} gün (${d.race.phase})` : ''}
+Şunları yaz:
+1) Geçen haftanın kısa değerlendirmesi (hacim ve yük dengeli miydi?).
+2) Bu hafta için odak: forma, ACWR'ye${d.race ? ', yarış dönemine' : ''} göre kaç antrenman, hangi yoğunluk, ne kadar dinlenme.
+Kısa ve doğrudan uygulanabilir.`;
+
+  if (apiKey) {
+    callGeminiAPI(apiKey, prompt)
+      .then(reply => { loader.remove(); appendChatMessage('bot', reply); })
+      .catch(() => { loader.remove(); appendChatMessage('bot', weeklyLocalReport(lw, tw, d)); });
+  } else {
+    setTimeout(() => { loader.remove(); appendChatMessage('bot', weeklyLocalReport(lw, tw, d)); }, 800);
+  }
 }
 
 function generateCoachReport() {
@@ -3034,6 +3125,27 @@ function aiAddPlan(a) {
   return { ok: true, message: `${(SPORT_META[a.sport] || {}).name || a.sport} planı ${plan.date} tarihine eklendi.` };
 }
 
+function aiAddWeekPlan(a) {
+  const items = Array.isArray(a.items) ? a.items : [];
+  if (items.length === 0) return { error: 'Plan öğesi yok.' };
+  const weekStart = a.haftaBaslangic ? mondayOf(a.haftaBaslangic) : mondayOf(currentDateStr);
+  let added = 0;
+  items.forEach(it => {
+    if (it.sport == null || it.gun == null) return;
+    state.plans.push({
+      id: 'p_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+      date: addDaysStr(weekStart, Math.max(0, Math.min(6, it.gun))),
+      sport: it.sport,
+      targetDistance: it.mesafe != null ? it.mesafe : null,
+      targetDuration: it.sure != null ? it.sure : null,
+      details: it.detay || '', completed: false
+    });
+    added++;
+  });
+  saveState(); renderProgramView(); renderTodayView();
+  return { ok: true, message: `${added} antrenman ${weekStart} haftasına eklendi.` };
+}
+
 function aiSetBody(a) {
   const date = a.date || currentDateStr;
   const log = state.holisticLogs[date] || (state.holisticLogs[date] = {});
@@ -3116,6 +3228,31 @@ const AI_TOOLS = [
     }
   },
   {
+    name: 'haftalikPlanEkle', write: true, run: aiAddWeekPlan,
+    summary: a => `📅 ${(a.items || []).length} antrenmanlık haftalık plan eklensin mi?`,
+    declaration: {
+      name: 'haftalikPlanEkle',
+      description: 'Bir haftaya birden çok antrenman planı ekler (haftalık program). Yarış tarihine, döneme ve forma göre dengeli kur; dinlenme günleri bırak.',
+      parameters: {
+        type: 'object', properties: {
+          haftaBaslangic: { type: 'string', description: 'YYYY-MM-DD (haftanın herhangi bir günü); verilmezse bu hafta' },
+          items: {
+            type: 'array', description: 'Antrenmanlar',
+            items: {
+              type: 'object', properties: {
+                gun: { type: 'number', description: '0=Pazartesi ... 6=Pazar' },
+                sport: { type: 'string', enum: ['run', 'bike', 'swim', 'fitness'] },
+                mesafe: { type: 'number', description: 'koşu/bisiklet km, yüzme m' },
+                sure: { type: 'number', description: 'dakika' },
+                detay: { type: 'string', description: 'kısa açıklama, örn. "5x1000m tempo"' }
+              }, required: ['gun', 'sport']
+            }
+          }
+        }, required: ['items']
+      }
+    }
+  },
+  {
     name: 'vucutDurumuKaydet', write: true, run: aiSetBody,
     summary: a => `🩺 ${a.date || 'bugün'}: ${[a.sleep != null ? 'uyku ' + a.sleep + 'sa' : '', a.sleepScore != null ? 'puan ' + a.sleepScore : '', a.hrv != null ? 'HRV ' + a.hrv : '', a.weight != null ? a.weight + 'kg' : ''].filter(Boolean).join(', ')} — kaydedilsin mi?`,
     declaration: {
@@ -3176,10 +3313,10 @@ function assistantSystemPrompt() {
   const p = state.profile;
   return `Sen ${p.name || 'sporcu'} için triatlon ve koşu antrenörü/asistanısın. Türkçe, kısa ve net konuş.
 Bugünün tarihi: ${currentDateStr}.
-Kullanıcı bir şey eklemeni/kaydetmeni isterse uygun ARACI çağır (antrenmanEkle, antrenmanPlaniEkle, vucutDurumuKaydet, besinEkle, hedefGuncelle). Geçmiş veri lazımsa gunVerisiniGetir aracını kullan.
+Kullanıcı bir şey eklemeni/kaydetmeni isterse uygun ARACI çağır (antrenmanEkle, antrenmanPlaniEkle, haftalikPlanEkle, vucutDurumuKaydet, besinEkle, hedefGuncelle). Haftalık program istenirse haftalikPlanEkle ile tüm haftayı tek seferde ekle. Geçmiş veri lazımsa gunVerisiniGetir aracını kullan.
 Kurallar: Tarih verilmezse bugünü kullan. Yüzme mesafesi METRE, koşu/bisiklet KM. Emin değilsen kullanıcıya sor; uydurma.
-Güncel durum: bugün uyku ${d.body.sleep != null ? d.body.sleep : '-'}/puan ${d.body.sleepScore != null ? d.body.sleepScore : '-'}, HRV ${d.body.hrv != null ? d.body.hrv : '-'}; bu hafta yük ${d.load.thisWeek}dk; hazır olma ${d.readiness ? d.readiness.label : '-'}.
-Sadece spor, antrenman, beslenme, uyku ve toparlanma konularında yardım et.`;
+Güncel durum: bugün uyku ${d.body.sleep != null ? d.body.sleep : '-'}/puan ${d.body.sleepScore != null ? d.body.sleepScore : '-'}, HRV ${d.body.hrv != null ? d.body.hrv : '-'}; bu hafta ${d.weekTss} TSS; Form/TSB ${d.form}${d.acwr != null ? ', ACWR ' + d.acwr : ''}; hazır olma ${d.readiness ? d.readiness.label : '-'}${d.race ? `; hedef yarış ${d.race.name} ${d.race.daysLeft} gün (${d.race.phase})` : ''}.
+Tavsiye verirken bu verileri (form, ACWR, yarışa kalan süre/dönem) dikkate al. Sadece spor, antrenman, beslenme, uyku ve toparlanma konularında yardım et.`;
 }
 
 async function geminiGenerate(apiKey, contents, systemText, tools) {
@@ -3217,11 +3354,17 @@ function aiConfirmAction(summaryText) {
   });
 }
 
+// Sohbet hafızası (oturum boyunca son turlar; bağlamlı konuşma için)
+let aiChatTurns = [];
+
 // Agent döngüsü: model → (araç çağrısı → onay/çalıştır → sonuç) → final metin
 async function runAssistantAgent(apiKey, userText, loader) {
   const sys = assistantSystemPrompt();
   const tools = [{ functionDeclarations: AI_TOOLS.map(t => t.declaration) }];
-  const contents = [{ role: 'user', parts: [{ text: userText }] }];
+  const contents = [];
+  aiChatTurns.slice(-8).forEach(t => contents.push({ role: t.role, parts: [{ text: t.text }] }));
+  contents.push({ role: 'user', parts: [{ text: userText }] });
+  aiChatTurns.push({ role: 'user', text: userText });
 
   for (let step = 0; step < 6; step++) {
     if (loader && !loader.isConnected) {
@@ -3232,8 +3375,10 @@ async function runAssistantAgent(apiKey, userText, loader) {
     const fcPart = parts.find(p => p.functionCall);
 
     if (!fcPart) {
-      const text = parts.map(p => p.text).filter(Boolean).join('\n').trim();
-      return text || 'Tamam.';
+      const text = parts.map(p => p.text).filter(Boolean).join('\n').trim() || 'Tamam.';
+      aiChatTurns.push({ role: 'model', text });
+      if (aiChatTurns.length > 16) aiChatTurns = aiChatTurns.slice(-16);
+      return text;
     }
 
     contents.push(cand.content); // modelin araç çağrısı turu

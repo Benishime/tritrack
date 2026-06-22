@@ -9,7 +9,22 @@ Bu dosya, uygulamada adım adım yapılan geliştirmeleri kaydeder. Sonradan dö
 > - `index.html` içindeki `?v=1.X` (css + js linkleri)
 > - `sw.js` içindeki `CACHE_NAME = 'tritrack-vX'`
 >
-> **Son sürüm:** `?v=1.30` · `tritrack-v30`
+> **Son sürüm:** `?v=1.31` · `tritrack-v31`
+
+---
+
+## ✅ AI Asistan güçlendirme (4 madde)
+
+- **#1 Zengin bağlam:** `gatherCoachData` artık Form/TSB, CTL/ATL, **ACWR**, haftalık TSS, **hedef yarış (gün+faz)**
+  ve **eşikleri (LTHR/FTP/tempo)** içeriyor (`getRaceInfo`). `coachReportPrompt` + `assistantSystemPrompt` bunları
+  kullanıyor → tavsiyeler veriye dayalı + döneme uygun.
+- **#3 Sohbet hafızası:** `aiChatTurns` (son ~8 tur) `runAssistantAgent`'a ekleniyor → bağlamlı, sürdürülebilir diyalog.
+- **#2 Haftalık plan üretimi:** yeni AI aracı **`haftalikPlanEkle`** (`aiAddWeekPlan`) — yarış/forma göre tüm haftayı
+  tek onayla Programa ekler. Asistan'a **"📅 Haftalık Plan Öner"** butonu.
+- **#4 Haftalık rapor:** **"📊 Haftalık Rapor"** butonu → `generateWeeklyReport` (geçen hafta vs bu hafta + Form/ACWR;
+  API yoksa `weeklyLocalReport` yerel özet).
+
+---
 
 ---
 
