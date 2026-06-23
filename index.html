@@ -14,7 +14,7 @@
   <link rel="manifest" href="manifest.json">
 
   <!-- CSS -->
-  <link rel="stylesheet" href="styles.css?v=1.41">
+  <link rel="stylesheet" href="styles.css?v=1.42">
 </head>
 
 <body class="theme-auto">
@@ -1359,9 +1359,11 @@
   </div>
 
   <!-- Javascripts -->
-  <script src="supabase.min.js?v=1.41"></script>
-  <script src="foods.js?v=1.41"></script>
-  <script src="app.js?v=1.41"></script>
+  <!-- supabase: 3. taraf UMD, klasik script (window.supabase global'ini sağlar; modüllerden önce çalışır) -->
+  <script src="supabase.min.js?v=1.42"></script>
+  <!-- Uygulama kodu artık ES modüllerine bölündü (js/). Giriş noktası: js/main.js
+       (foods.js → js/foods.js olarak diyet modülüne import edilir). -->
+  <script type="module" src="js/main.js?v=1.42"></script>
 </body>
 
 </html>
