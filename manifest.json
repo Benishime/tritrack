@@ -9,25 +9,25 @@
   "prefer_related_applications": false,
   "icons": [
     {
-      "src": "icon-192.png",
+      "src": "assets/icon-192.png",
       "type": "image/png",
       "sizes": "192x192",
       "purpose": "any"
     },
     {
-      "src": "icon-512.png",
+      "src": "assets/icon-512.png",
       "type": "image/png",
       "sizes": "512x512",
       "purpose": "any"
     },
     {
-      "src": "icon-1024.png",
+      "src": "assets/icon-1024.png",
       "type": "image/png",
       "sizes": "1024x1024",
       "purpose": "any"
     },
     {
-      "src": "icon-maskable-512.png",
+      "src": "assets/icon-maskable-512.png",
       "type": "image/png",
       "sizes": "512x512",
       "purpose": "maskable"
@@ -35,14 +35,14 @@
   ],
   "screenshots": [
     {
-      "src": "screenshot-dashboard.png",
+      "src": "assets/screenshot-dashboard.png",
       "type": "image/png",
       "sizes": "1024x1024",
       "form_factor": "narrow",
       "label": "Günlük dashboard: antrenman planı, diyet takibi ve vücut durumu"
     },
     {
-      "src": "screenshot-analysis.png",
+      "src": "assets/screenshot-analysis.png",
       "type": "image/png",
       "sizes": "1024x1024",
       "form_factor": "narrow",
