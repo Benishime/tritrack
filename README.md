@@ -11,7 +11,7 @@ Uygulama herhangi bir sunucuya ihtiyaç duymadan tamamen tarayıcıda çalışı
 *   **🏠 Bugün (Dashboard):** Tarih gezinmeli günlük panel — vücut durumu (uyku, **uyku puanı**, HRV, kilo), günün antrenman ve diyet planları, yapılan antrenmanlar, kalori/makro özeti, "Yarın ne yiyeceğim?" önizlemesi.
 *   **🗓️ Program:** Haftalık antrenman programı + **antrenörden gelen planı toplu içe aktarma** (metin yapıştır → akıllı ayrıştır → canlı önizleme → ekle).
 *   **🍉 Diyet:** Günlük takip **ve haftalık plan** modu. Open Food Facts API + çevrimdışı yerel besin listesi. Porsiyon/tabak/kase/bardak/avuç birimleri.
-*   **🏋️ Antrenman Kaydı:** Koşu / Bisiklet / Yüzme / Güç formları (pace, güç, kadans, nabız, RPE). Kayıtları **düzenleme** ve **GPX/TCX dosyası içe aktarma** (Strava/Garmin/Polar).
+*   **🏋️ Antrenman Kaydı:** Koşu / Bisiklet / Yüzme / Güç formları (pace, güç, kadans, nabız, RPE). Kayıtları **düzenleme/silme** ve **Strava canlı senkronu** (Cloudflare Worker proxy ile otomatik içe aktarma).
 *   **📊 Analiz:** Saf SVG grafikler — haftalık yük, branş dağılımı, uyku & HRV trendi, "tek bakışta" özet kartları + yorumlar.
 *   **🤖 AI Koç:** Gemini (`gemini-2.5-flash`) bulut modu veya çevrimdışı yerel mod. Hazır-olma (readiness) hesabı, veri-farkında sohbet.
 *   **🚀 Onboarding:** İlk açılışta kurulum sihirbazı; kalori + makro hedeflerini Mifflin-St Jeor ile otomatik hesaplar.
@@ -22,20 +22,55 @@ Uygulama herhangi bir sunucuya ihtiyaç duymadan tamamen tarayıcıda çalışı
 
 ## 📂 Dosya Yapısı
 
-*   `index.html` - Mobil öncelikli arayüz: 6 sekme (Bugün, Program, Diyet, Antrenman, Analiz, Profil), modal pencereler ve onboarding sihirbazı.
-*   `styles.css` - Açık/Karanlık tema, grafik (`.chart-*` / `.glance-*`), onboarding ve toplu plan stilleri, animasyonlar.
-*   `app.js` - State yönetimi, navigasyon, diyet araması (Open Food Facts), GPX/TCX ayrıştırma, SVG grafikler, AI Koç, onboarding ve form lojikleri (numaralı bölümlere ayrılmıştır).
-*   `foods.js` - Çevrimdışı kullanılabilen popüler sporcu gıdası listesi.
-*   `manifest.json` - PWA Manifestosu (telefona kurulum / Play Store).
-*   `sw.js` - Çevrimdışı önbellek Service Worker'ı (sürüm `CACHE_NAME` ile takip edilir).
-*   `icon-192.png` & `icon-512.png` - Uygulama logoları.
+Kök dizinde yalnızca **canlı uygulama** dosyaları durur; kod `js/` ES modüllerine, dokümanlar `docs/`'a,
+görseller `assets/`'e ayrılmıştır.
 
-### 📑 Dokümantasyon
-*   `GELISTIRME-GUNLUGU.md` - Adım adım geliştirme günlüğü (ne, neden, hangi fonksiyon).
-*   `CALISMA-DUZENI.md` - Git dal yapısı, commit kuralları, çoklu yapay zeka / sub-agent çalışma düzeni.
-*   `ux_report.md` - UX analizi ve düzeltme durumu.
+```
+TriTrack/
+├── index.html            # Mobil öncelikli arayüz: 5 alt sekme + Profil, modallar, onboarding sihirbazı
+├── styles.css            # Açık/Karanlık tema, grafik (.chart-*/.glance-*), onboarding & toplu plan stilleri
+├── sw.js                 # Service Worker (çevrimdışı önbellek; HTML için ağ-öncelikli; sürüm = CACHE_NAME)
+├── manifest.json         # PWA manifestosu (telefona kurulum / Play Store)
+├── supabase.min.js       # 3. taraf Supabase istemcisi (klasik script, modüllerden önce yüklenir)
+├── README.md             # Bu dosya
+│
+├── js/                   # ⚙️ Uygulama kodu — ES modülleri (giriş: js/main.js, type="module")
+│   ├── main.js           #   navigasyon + DOMContentLoaded bootstrap (GİRİŞ NOKTASI)
+│   ├── state.js          #   merkezi state, loadState/saveState, kimlik/tarih yardımcıları, setter'lar
+│   ├── cloud.js          #   Supabase auth + bulut senkron
+│   ├── theme.js          #   açık/koyu tema
+│   ├── today.js          #   "Bugün" paneli (vücut durumu, su, diyet özeti, plan listeleri)
+│   ├── program.js        #   haftalık program + aylık takvim + toplu plan içe aktarma
+│   ├── diet.js           #   günlük diyet takibi + haftalık diyet planı + besin arama
+│   ├── workout.js        #   antrenman kayıt formları (koşu/bisiklet/yüzme/güç)
+│   ├── profile.js        #   profil/ayarlar (3 alt sayfa) + AI ayar bağlama
+│   ├── ai.js             #   AI Koç (çok sağlayıcı LLM + function-calling araçları + raporlar)
+│   ├── analysis.js       #   Analiz sekmesi (saf SVG grafikler, TSS/CTL/ATL, zone'lar, PR)
+│   ├── data.js           #   JSON yedekleme / geri yükleme / sıfırlama
+│   ├── importgpx.js      #   GPX/TCX ayrıştırma yardımcıları (canlı Strava senkronu kullanır)
+│   ├── strava.js         #   Strava canlı senkron (Cloudflare Worker proxy)
+│   ├── onboarding.js     #   ilk açılış kurulum sihirbazı (Mifflin-St Jeor hedefleri)
+│   ├── utils.js          #   ortak yardımcılar (toast, onay modalı, SW kaydı, escape)
+│   └── foods.js          #   çevrimdışı popüler sporcu gıdası listesi (LOCAL_FOODS)
+│
+├── assets/               # 🖼️ İkonlar + ekran görüntüleri (icon-*.png, screenshot-*.png)
+├── docs/                 # 📑 Tüm dokümantasyon (aşağıya bak)
+├── db/                   # Supabase şeması (schema.sql)
+├── strava-proxy/         # Cloudflare Worker (Strava OAuth proxy: worker.js + wrangler.toml)
+└── Starava veri/         # ⚠️ Kişisel Strava arşivi — .gitignore'lu, ASLA commit edilmez
+```
 
-> **Sürüm kuralı:** Dosya değişince `index.html` içindeki `?v=1.X` ve `sw.js` içindeki `CACHE_NAME='tritrack-vX'` elle artırılır (eski önbellek sorunu olmasın). Güncel: `v1.13`.
+### 📑 docs/
+*   `GELISTIRME-GUNLUGU.md` — Adım adım geliştirme günlüğü (ne, neden, hangi fonksiyon/sürüm).
+*   `GELISTIRME-TALEPLERI.md` — Talep edilen UX/mimari değişiklikler.
+*   `CALISMA-DUZENI.md` — Git dal yapısı, commit kuralları, çoklu yapay zeka / sub-agent düzeni.
+*   `STRAVA-KURULUM.md` · `SUPABASE-KURULUM.md` — Kurulum rehberleri.
+*   `AI-VERI-ERISIMI.md` — AI'ın eriştiği veri kapsamı.
+*   `ux_report.md` · `ux_bug_report.md` — UX analizi ve düzeltme durumu.
+*   `TriTrack APK Oluşturma ve Telefona Yükleme Planı.md` — APK/TWA paketleme notları.
+
+> **Sürüm kuralı:** Dosya değişince `index.html` içindeki `?v=1.X` ve `sw.js` içindeki `CACHE_NAME='tritrack-vX'`
+> elle (+ `docs/GELISTIRME-GUNLUGU.md` başlığı) artırılır — eski önbellek sorunu olmasın. **Güncel: `v1.43`.**
 
 ---
 

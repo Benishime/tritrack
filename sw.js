@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tritrack-v42';
+const CACHE_NAME = 'tritrack-v43';
 const ASSETS = [
   './',
   './index.html',
@@ -23,12 +23,12 @@ const ASSETS = [
   './js/onboarding.js',
   './js/utils.js',
   './manifest.json',
-  './icon-192.png',
-  './icon-512.png',
-  './icon-1024.png',
-  './icon-maskable-512.png',
-  './screenshot-dashboard.png',
-  './screenshot-analysis.png'
+  './assets/icon-192.png',
+  './assets/icon-512.png',
+  './assets/icon-1024.png',
+  './assets/icon-maskable-512.png',
+  './assets/screenshot-dashboard.png',
+  './assets/screenshot-analysis.png'
 ];
 
 self.addEventListener('install', (e) => {

@@ -9,7 +9,21 @@ Bu dosya, uygulamada adım adım yapılan geliştirmeleri kaydeder. Sonradan dö
 > - `index.html` içindeki `?v=1.X` (css + js linkleri)
 > - `sw.js` içindeki `CACHE_NAME = 'tritrack-vX'`
 >
-> **Son sürüm:** `?v=1.42` · `tritrack-v42`
+> **Son sürüm:** `?v=1.43` · `tritrack-v43`
+
+---
+
+## 🗂️ Klasör düzeni: kök sadeleştirildi (v1.43)
+
+- Kök dizin dağınıktı (10+ `.md`, 6 büyük görsel, kod hep ortada). Düzenlendi:
+  - **`docs/`** → tüm dokümantasyon (`GELISTIRME-GUNLUGU.md`, `GELISTIRME-TALEPLERI.md`, `CALISMA-DUZENI.md`,
+    `STRAVA-KURULUM.md`, `SUPABASE-KURULUM.md`, `AI-VERI-ERISIMI.md`, `ux_report.md`, `ux_bug_report.md`,
+    APK planı, triatlon analizi, `ornek-antrenman.gpx`). `README.md` kökte kaldı (GitHub girişi).
+  - **`assets/`** → ikonlar + ekran görüntüleri (`icon-*.png`, `screenshot-*.png`).
+  - Kökte yalnızca canlı uygulama: `index.html`, `sw.js`, `manifest.json`, `styles.css`, `supabase.min.js`,
+    `js/` (ES modülleri), `db/`, `strava-proxy/`. (`Starava veri/` = gitignore'lu kişisel arşiv, dokunulmadı.)
+- Görsel taşıma referansları güncellendi: `manifest.json` (icons/screenshots `assets/`), `sw.js` ASSETS
+  (`./assets/...`), `index.html` (favicon/apple-touch `assets/icon-192.png`). Dosya yapısı README'ye eklendi.
 
 ---
 
