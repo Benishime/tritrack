@@ -9,7 +9,25 @@ Bu dosya, uygulamada adım adım yapılan geliştirmeleri kaydeder. Sonradan dö
 > - `index.html` içindeki `?v=1.X` (css + js linkleri)
 > - `sw.js` içindeki `CACHE_NAME = 'tritrack-vX'`
 >
-> **Son sürüm:** `?v=1.41` · `tritrack-v41`
+> **Son sürüm:** `?v=1.42` · `tritrack-v42`
+
+---
+
+## 🧩 Mimari: tek app.js → ES modülleri (v1.42)
+
+- **Sorun:** ~5100 satırlık tek `app.js` bakım/geliştirmeyi zorlaştırıyordu.
+- **Çözüm:** Mantıksal bölümlere göre **gerçek ES modüllerine** ayrıldı (`js/`):
+  `state, cloud, main (giriş+bootstrap), theme, today, program, diet, workout, profile, ai, data,
+  importgpx, strava, analysis, onboarding, utils` + `foods`. `index.html` artık tek modül girişi
+  (`<script type="module" src="js/main.js">`); `supabase.min.js` klasik script olarak kalır (modüllerden
+  önce, `window.supabase` global'i). `sw.js` modül dosyalarını cache'ler.
+- **ESM uyarlamaları:** import bağlamaları salt-okunur olduğundan çapraz-modül yeniden atamalar için `state.js`'e
+  setter eklendi (`replaceState`/`setCurrentDateStr`/`setNeedsOnboarding`); `editingWorkoutId` workout modülüne
+  taşındı; yükleme anında `currentDateStr` okuyan başlatıcılar `formatDate(new Date())` ile döngü/TDZ-güvenli yapıldı.
+- **Doğrulama:** tüm modüller ESM syntax OK; tüm import'lar gerçek export'lara çözülüyor; tüm modül grafiği
+  DOM-shim altında baştan sona hatasız yükleniyor; tarayıcıda duman testi (SW kaydı + sekmeler) başarılı.
+  Davranış birebir korundu (kod taşındı, mantık değişmedi). İzole `modularizasyon` dalında yapıldı; yedek:
+  `yedek/pre-modular-v1.41`. Ayrıca: favicon linki + `mobile-web-app-capable` meta eklendi (konsol 404/uyarı giderildi).
 
 ---
 
